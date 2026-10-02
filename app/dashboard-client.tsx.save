@@ -1,0 +1,142 @@
+"use client";
+
+import {
+  AlertTriangle, BarChart3, Bookmark, CheckCircle2, ChevronDown, Eye, EyeOff,
+  FolderHeart, Gauge, Heart, Images, KeyRound, LockKeyhole, LogOut,
+  MessageCircle, Search, Send, Settings, ShieldAlert, ShieldCheck, Sparkles,
+  UserRound, Users,
+} from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuBadge,
+  SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Toaster } from "@/components/ui/sonner";
+import {
+  AnalyticsView, ContentView, FailuresView, OverviewView, PageKey,
+  ReviewItem, SettingsView, TeamView, UgcView, contentItems,
+} from "./dashboard-views";
+
+const workspaceNavigation: { key: PageKey; label: string; icon: React.ComponentType<{ className?: string }>; count?: number }[] = [
+  { key: "overview", label: "Overview", icon: Gauge },
+  { key: "content", label: "Content", icon: Images, count: 7 },
+  { key: "published", label: "Published", icon: CheckCircle2 },
+  { key: "ugc", label: "UGC library", icon: FolderHeart, count: 12 },
+  { key: "failures", label: "Failures", icon: AlertTriangle, count: 2 },
+  { key: "analytics", label: "Analytics", icon: BarChart3 },
+];
+
+const manageNavigation: { key: PageKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: "team", label: "Team & access", icon: Users },
+  { key: "settings", label: "Settings", icon: Settings },
+];
+
+const pageLabels: Record<PageKey, string> = {
+  overview: "Overview", content: "Content", published: "Published", ugc: "UGC library",
+  failures: "Failures", analytics: "Analytics", team: "Team & access", settings: "Settings",
+};
+
+function LoginScreen({ onSignIn }: { onSignIn: () => void }) {
+  const [email, setEmail] = useState("fleur@mamajewels.nl");
+  const [password, setPassword] = useState("mamajewels-demo");
+  const [showPassword, setShowPassword] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!email.includes("@")) { toast.error("Enter a valid email address"); return; }
+    if (resetMode) { toast.success("Password reset instructions prepared"); setResetMode(false); return; }
+    if (!password) { toast.error("Enter your password"); return; }
+    onSignIn();
+  };
+  return <main className="grid min-h-screen bg-[#f6f4f7] lg:grid-cols-[.86fr_1.14fr]">
+    <section className="relative hidden overflow-hidden bg-[#21152a] p-12 text-white lg:flex lg:flex-col lg:justify-between xl:p-16"><div className="absolute -right-20 -top-24 size-80 rounded-full bg-[#8e4468]/25 blur-3xl" /><div className="absolute -bottom-16 -left-24 size-96 rounded-full bg-[#f7a8c4]/10 blur-3xl" /><div className="relative flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-[#f7a8c4] text-[#21152a]"><Sparkles className="size-5" /></div><div><p className="text-lg font-semibold">MamaJewels</p><p className="text-xs text-white/50">Content operations</p></div></div><div className="relative max-w-lg"><Badge className="border border-white/15 bg-white/10 text-white">One content system · four markets</Badge><h1 className="mt-6 text-4xl font-semibold leading-[1.08] tracking-[-0.04em] xl:text-5xl">Create once in NL.<br />Operate everywhere.</h1><p className="mt-5 max-w-md text-base leading-7 text-white/60">Archive, localize, review and publish MamaJewels content while keeping UGC and safety decisions under human control.</p><div className="mt-10 grid grid-cols-3 gap-3"><div className="rounded-2xl border border-white/10 bg-white/[.05] p-4"><p className="text-2xl font-semibold">4</p><p className="mt-1 text-xs text-white/45">Instagram markets</p></div><div className="rounded-2xl border border-white/10 bg-white/[.05] p-4"><p className="text-2xl font-semibold">15</p><p className="mt-1 text-xs text-white/45">Automations</p></div><div className="rounded-2xl border border-white/10 bg-white/[.05] p-4"><p className="text-2xl font-semibold">99.2%</p><p className="mt-1 text-xs text-white/45">Workflow success</p></div></div></div><p className="relative text-xs text-white/35">Private workspace · activity is recorded in the audit log</p></section>
+    <section className="flex min-h-screen items-center justify-center p-5 sm:p-10"><div className="w-full max-w-[430px]"><div className="mb-10 flex items-center gap-3 lg:hidden"><div className="grid size-10 place-items-center rounded-2xl bg-[#21152a] text-[#f7a8c4]"><Sparkles className="size-5" /></div><div><p className="font-semibold">MamaJewels</p><p className="text-xs text-[#8b838e]">Content operations</p></div></div><div className="rounded-[26px] border border-[#e6e1e8] bg-white p-6 shadow-[0_24px_70px_rgba(39,24,48,.08)] sm:p-9"><div className="grid size-12 place-items-center rounded-2xl bg-[#f6e7ee] text-[#783b59]"><KeyRound className="size-5" /></div><h2 className="mt-6 text-2xl font-semibold tracking-tight">{resetMode ? "Reset your password" : "Welcome back"}</h2><p className="mt-2 text-sm leading-6 text-[#7d7580]">{resetMode ? "Enter your email and we’ll prepare a secure reset link." : "Sign in to manage content, approvals and publishing."}</p><form onSubmit={submit} className="mt-7 space-y-4"><div className="grid gap-2"><Label htmlFor="login-email">Email address</Label><Input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="h-11 rounded-xl" /></div>{!resetMode ? <div className="grid gap-2"><div className="flex items-center justify-between"><Label htmlFor="login-password">Password</Label><button type="button" onClick={() => setResetMode(true)} className="text-xs font-medium text-[#733651] hover:underline">Forgot password?</button></div><div className="relative"><Input id="login-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} className="h-11 rounded-xl pr-11" /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8d8590]" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></div></div> : null}<Button type="submit" className="h-11 w-full rounded-xl bg-[#632b4a] text-white hover:bg-[#4e203a]">{resetMode ? "Prepare reset link" : "Sign in"}</Button>{resetMode ? <Button type="button" variant="ghost" className="w-full" onClick={() => setResetMode(false)}>Back to sign in</Button> : null}</form></div><p className="mt-5 text-center text-xs text-[#918993]">Access is limited to approved MamaJewels team members.</p></div></section>
+  </main>;
+}
+
+function AppSidebar({ activePage, setActivePage, humanApproval }: { activePage: PageKey; setActivePage: (page: PageKey) => void; humanApproval: boolean }) {
+  const renderItem = (item: { key: PageKey; label: string; icon: React.ComponentType<{ className?: string }>; count?: number }) => {
+    const Icon = item.icon;
+    return <SidebarMenuItem key={item.key}><SidebarMenuButton onClick={() => setActivePage(item.key)} isActive={activePage === item.key} tooltip={item.label} className="h-10 rounded-xl px-3 text-white/68 hover:bg-white/10 hover:text-white data-[active=true]:bg-white data-[active=true]:text-[#21152a] data-[active=true]:shadow-sm"><Icon className="size-[18px]" /><span>{item.label}</span></SidebarMenuButton>{item.count ? <SidebarMenuBadge className={activePage === item.key ? "text-[#21152a]" : "text-white/65"}>{item.count}</SidebarMenuBadge> : null}</SidebarMenuItem>;
+  };
+  return <Sidebar collapsible="offcanvas" className="border-r-0 bg-[#21152a] text-white [&_[data-slot=sidebar-inner]]:bg-[#21152a]"><SidebarHeader className="h-20 justify-center border-b border-white/10 px-5"><button onClick={() => setActivePage("overview")} className="flex items-center gap-3 text-left"><div className="grid size-10 place-items-center rounded-2xl bg-[#f7a8c4] text-[#21152a]"><Sparkles className="size-5" /></div><div><p className="text-[17px] font-semibold tracking-tight">MamaJewels</p><p className="text-xs text-white/50">Content operations</p></div></button></SidebarHeader><SidebarContent className="px-3 py-4"><SidebarGroup className="p-0"><SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-[.13em] text-white/35">Workspace</SidebarGroupLabel><SidebarGroupContent><SidebarMenu className="gap-1">{workspaceNavigation.map(renderItem)}</SidebarMenu></SidebarGroupContent></SidebarGroup><SidebarGroup className="mt-4 p-0"><SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-[.13em] text-white/35">Manage</SidebarGroupLabel><SidebarGroupContent><SidebarMenu className="gap-1">{manageNavigation.map(renderItem)}</SidebarMenu></SidebarGroupContent></SidebarGroup></SidebarContent><SidebarFooter className="p-3"><button onClick={() => setActivePage("settings")} className={`rounded-2xl border p-4 text-left transition ${humanApproval ? "border-white/10 bg-white/[.06]" : "border-[#f09aaa]/30 bg-[#8d3346]/20"}`}><div className="flex items-center gap-2 text-sm font-medium">{humanApproval ? <ShieldCheck className="size-4 text-[#8ae2b0]" /> : <ShieldAlert className="size-4 text-[#ffabb9]" />}Human approval is {humanApproval ? "ON" : "OFF"}</div><p className="mt-1 text-xs leading-5 text-white/45">{humanApproval ? "Owned content waits for your team." : "Eligible owned content can publish automatically."}</p></button></SidebarFooter><SidebarRail /></Sidebar>;
+}
+
+function Header({ activePage, setActivePage, onSignOut }: { activePage: PageKey; setActivePage: (page: PageKey) => void; onSignOut: () => void }) {
+  return <header className="sticky top-0 z-30 flex h-20 items-center gap-3 border-b border-[#e8e5eb] bg-white/90 px-4 backdrop-blur-xl sm:px-7"><SidebarTrigger className="size-10 rounded-xl border border-[#e5e1e7]" /><div className="hidden min-w-0 items-center gap-2 text-sm text-[#8c8490] sm:flex"><span>Workspace</span><span>/</span><span className="truncate font-medium text-[#3f3942]">{pageLabels[activePage]}</span></div><div className="relative ml-auto hidden w-full max-w-sm lg:block"><Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#8e8793]" /><Input aria-label="Search content" placeholder="Search content, creators or errors" className="h-10 rounded-xl border-[#e7e3e9] bg-[#faf9fb] pl-10" /></div><DropdownMenu><DropdownMenuTrigger asChild><button className="flex items-center gap-2 rounded-xl p-1.5 pr-2 hover:bg-[#f5f2f6]"><span className="grid size-9 place-items-center rounded-xl bg-[#f4d1df] text-sm font-semibold text-[#6d2448]">FM</span><span className="hidden text-left xl:block"><span className="block text-sm font-medium">Fleur Maas</span><span className="block text-xs text-[#8e8793]">Administrator</span></span><ChevronDown className="hidden size-4 text-[#8e8793] sm:block" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-52 rounded-xl"><DropdownMenuLabel>fleur@mamajewels.nl</DropdownMenuLabel><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setActivePage("settings")}><UserRound />Publishing settings</DropdownMenuItem><DropdownMenuItem onClick={() => setActivePage("team")}><Users />Team access</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem variant="destructive" onClick={onSignOut}><LogOut />Sign out</DropdownMenuItem></DropdownMenuContent></DropdownMenu></header>;
+}
+
+const marketPosts = [
+  { key: "de", tab: "Germany", account: "mamajewels.de", caption: "Drei mühelose Möglichkeiten, Perlen in deinen täglichen Look zu integrieren – solo, kombiniert oder als feines Statement." },
+  { key: "fr", tab: "France", account: "mamajewels.fr", caption: "Trois façons simples d’intégrer les perles à votre style quotidien : seules, superposées ou comme une touche délicate." },
+  { key: "us", tab: "USA", account: "mamajewels.usa", caption: "Three effortless ways to make pearls part of your everyday stack—worn solo, layered, or as a subtle statement." },
+];
+
+function InstagramPost({ item, account, caption, editable = true }: { item: ReviewItem; account: string; caption: string; editable?: boolean }) {
+  return <div className="mx-auto max-w-[470px] overflow-hidden rounded-2xl border border-[#dedade] bg-white shadow-sm"><div className="flex items-center gap-3 p-3"><span className="grid size-9 place-items-center rounded-full bg-[#f2dce6] text-[10px] font-bold text-[#713751]">MJ</span><div className="flex-1"><p className="text-sm font-semibold">{account}</p><p className="text-[11px] text-[#918a94]">MamaJewels</p></div><span className="text-lg">•••</span></div><img src={item.image} alt={item.title} className="aspect-square w-full object-cover" /><div className="p-3"><div className="flex items-center gap-4"><Heart className="size-6" /><MessageCircle className="size-6" /><Send className="size-6" /><Bookmark className="ml-auto size-6" /></div><p className="mt-3 text-sm font-semibold">1,248 likes</p>{editable ? <div className="mt-2"><Label className="mb-2 block text-xs text-[#8f8792]">Edit caption</Label><Textarea defaultValue={caption} className="min-h-24 resize-none rounded-xl border-[#e6e2e7] text-sm leading-5" /></div> : <p className="mt-2 text-sm leading-5"><span className="font-semibold">{account}</span> {caption}</p>}<p className="mt-2 text-[10px] uppercase text-[#a39ca5]">{item.capturedLabel}</p></div></div>;
+}
+
+function ContentReviewSheet({ item, onClose }: { item: ReviewItem | null; onClose: () => void }) {
+  if (!item) return null;
+  const isUgc = item.kind === "ugc";
+  return <Sheet open={Boolean(item)} onOpenChange={(open) => { if (!open) onClose(); }}><SheetContent className="w-full overflow-y-auto p-0 sm:max-w-[760px]"><SheetHeader className="border-b border-[#e8e4ea] p-5 pr-14"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{item.id}</Badge><Badge className={`${isUgc ? "bg-[#fff2d5] text-[#79530b]" : "bg-[#eaf1ff] text-[#315f9f]"} border-0`}>{isUgc ? "Manual UGC review" : item.status}</Badge></div><SheetTitle className="mt-2 text-xl">{item.title}</SheetTitle><SheetDescription>{item.source} · {item.type} · captured {item.capturedLabel}</SheetDescription></SheetHeader><div className="p-5">{isUgc ? <div className="space-y-5"><div className="rounded-2xl border border-[#f0d6b1] bg-[#fff9ed] p-4"><div className="flex gap-3"><LockKeyhole className="mt-0.5 size-5 text-[#8a641a]" /><div><p className="font-semibold text-[#624910]">Permission is required before reuse</p><p className="mt-1 text-sm leading-6 text-[#7c6740]">UGC never enters automatic publishing, even when approval mode is off.</p></div></div></div><InstagramPost item={item} account={item.title.split("by ")[1] || "creator"} caption={item.caption} /><div className="grid gap-2"><Label>Permission status</Label><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{["Not requested","Requested","Approved","Declined"].map((state, index) => <Button key={state} variant={index === 0 ? "default" : "outline"} size="sm" className="rounded-xl" onClick={() => toast.success(`Permission marked ${state.toLowerCase()}`)}>{state}</Button>)}</div></div></div> : <Tabs defaultValue="de"><TabsList className="sticky top-0 z-10 grid w-full grid-cols-3 bg-[#f4f1f4]"><TabsTrigger value="de">Germany</TabsTrigger><TabsTrigger value="fr">France</TabsTrigger><TabsTrigger value="us">USA</TabsTrigger></TabsList>{marketPosts.map((market) => <TabsContent key={market.key} value={market.key} className="mt-5 space-y-4"><InstagramPost item={item} account={market.account} caption={market.caption} /><div className="grid grid-cols-3 gap-2">{[["Language","Checked"],["Dutch text","None"],["Dutch speech","None"]].map(([label,value]) => <div key={label} className="rounded-xl bg-[#faf9fb] p-3"><p className="text-xs text-[#8d8590]">{label}</p><p className="mt-1 text-sm font-medium">{value}</p></div>)}</div></TabsContent>)}</Tabs>}<div className="mt-5 flex items-center justify-between rounded-2xl border border-[#e9e5ea] p-4"><div><p className="text-sm font-semibold">Google Drive archive</p><p className="mt-1 text-xs text-[#8d8590]">Original media, caption and metadata are stored safely.</p></div><Button variant="outline" size="sm" onClick={() => toast.success("Drive folder opened")}>Open folder</Button></div></div><SheetFooter className="sticky bottom-0 border-t border-[#e8e4ea] bg-white/95 p-5 backdrop-blur">{isUgc ? <div className="flex w-full gap-2"><Button variant="outline" className="flex-1" onClick={() => toast.success("Changes saved")}>Save changes</Button><Button className="flex-1" onClick={() => toast.success("Permission request recorded")}>Mark permission requested</Button></div> : <div className="flex w-full gap-2"><Button variant="outline" className="flex-1" onClick={() => toast.success("Caption changes saved")}>Save edits</Button><Button className="flex-1" onClick={() => { toast.success("Germany, France and USA approved"); onClose(); }}><CheckCircle2 className="size-4" />Approve all markets</Button></div>}</SheetFooter></SheetContent></Sheet>;
+}
+
+export default function DashboardClient() {
+  const [signedIn, setSignedIn] = useState(false);
+  const [activePage, setActivePage] = useState<PageKey>("overview");
+  const [humanApproval, setHumanApproval] = useState(true);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [approvalStep, setApprovalStep] = useState<1 | 2>(1);
+  const [selectedItem, setSelectedItem] = useState<ReviewItem | null>(null);
+  const [dbContentItems, setDbContentItems] = useState<ReviewItem[]>([]);
+
+  useEffect(() => {
+    const modelContext = (document as Document & { modelContext?: { registerTool: (tool: unknown, options?: { signal?: AbortSignal }) => unknown } }).modelContext;
+    if (!modelContext?.registerTool) return;
+    const lifecycle = new AbortController();
+    const register = (tool: unknown) => { try { void Promise.resolve(modelContext.registerTool(tool, { signal: lifecycle.signal })).catch(() => {}); } catch {} };
+    register({ name: "get_content_operations_status", title: "Get content operations status", description: "Read current publishing and approval status.", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, untrustedContentHint: false }, execute: async () => ({ pendingApproval: 7, totalPublished: 1284, newUgc: 12, failures: 2, humanApproval }) });
+    register({ name: "navigate_content_operations", title: "Open a dashboard section", description: "Navigate to a MamaJewels dashboard section.", inputSchema: { type: "object", properties: { page: { type: "string", enum: Object.keys(pageLabels) } }, required: ["page"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async (input: unknown) => { const page = (input as { page?: PageKey })?.page; if (!page || !(page in pageLabels)) throw new Error("Unknown dashboard page"); setSignedIn(true); setActivePage(page); return { page, label: pageLabels[page] }; } });
+    register({ name: "open_content_review", title: "Open a content item", description: "Open a content item in the preview and editing panel.", inputSchema: { type: "object", properties: { contentId: { type: "string" } }, required: ["contentId"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async (input: unknown) => { const id = (input as { contentId?: string })?.contentId; const item = contentItems.find((entry) => entry.id === id); if (!item) throw new Error("Content item not found"); setSignedIn(true); setSelectedItem(item); return { contentId: item.id, title: item.title, status: item.status }; } });
+    return () => lifecycle.abort();
+  }, [humanApproval]);
+
+  useEffect(() => {
+    fetch("/api/content")
+      .then((res) => res.json())
+      .then((data) => setDbContentItems(data))
+      .catch((error) => console.error("Failed to load content:", error));
+  }, []);
+  const changeApproval = (enabled: boolean) => {
+    if (enabled) { setHumanApproval(true); toast.success("Human approval turned on"); return; }
+    setApprovalStep(1); setApprovalDialogOpen(true);
+  };
+  const disableApproval = () => { setHumanApproval(false); setApprovalDialogOpen(false); setApprovalStep(1); toast.warning("Human approval is off for eligible owned content"); };
+  if (!signedIn) return <><LoginScreen onSignIn={() => { setSignedIn(true); toast.success("Signed in securely"); }} /><Toaster position="top-right" /></>;
+
+  const renderPage = () => {
+    if (activePage === "overview") return <OverviewView onOpen={setSelectedItem} onNavigate={setActivePage} />;
+  
+  if (activePage === "content") return <ContentView onOpen={setSelectedItem} />;
+    if (activePage === "published") return <ContentView title="Published content" description="All posts published through this system, with market and archive details." items={contentItems.filter((item) => item.status === "Published")} onOpen={setSelectedItem} />;
+    if (activePage === "ugc") return <UgcView onOpen={setSelectedItem} />;
+    if (activePage === "failures") return <FailuresView />;
+    if (activePage === "analytics") return <AnalyticsView />;
+    if (activePage === "team") return <TeamView />;
+    return <SettingsView humanApproval={humanApproval} onApprovalChange={changeApproval} />;
+  };
+
+  return <SidebarProvider style={{ "--sidebar-width": "16.25rem" } as React.CSSProperties}><AppSidebar activePage={activePage} setActivePage={setActivePage} humanApproval={humanApproval} /><SidebarInset className="min-w-0 bg-[#f7f7f8]"><Header activePage={activePage} setActivePage={setActivePage} onSignOut={() => { setSignedIn(false); setActivePage("overview"); toast.success("Signed out"); }} />{!humanApproval ? <button onClick={() => setActivePage("settings")} className="flex w-full items-center justify-center gap-2 border-b border-[#e9b5bc] bg-[#fff1f2] px-4 py-2.5 text-center text-sm font-medium text-[#933241]"><ShieldAlert className="size-4" />Human approval is OFF. Eligible owned content can publish automatically. UGC remains manual.<span className="underline underline-offset-2">Review settings</span></button> : null}<div className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-7 sm:px-7 lg:py-9">{renderPage()}</div></SidebarInset><ContentReviewSheet item={selectedItem} onClose={() => setSelectedItem(null)} /><AlertDialog open={approvalDialogOpen} onOpenChange={(open) => { setApprovalDialogOpen(open); if (!open) setApprovalStep(1); }}><AlertDialogContent className="rounded-2xl"><AlertDialogHeader><AlertDialogMedia className={approvalStep === 1 ? "bg-[#fff2d5] text-[#8a641a]" : "bg-[#fdebec] text-[#a33442]"}>{approvalStep === 1 ? <ShieldAlert /> : <AlertTriangle />}</AlertDialogMedia><AlertDialogTitle>{approvalStep === 1 ? "Turn off human approval?" : "Final confirmation"}</AlertDialogTitle><AlertDialogDescription className="leading-6">{approvalStep === 1 ? "Eligible MamaJewels-owned content will no longer wait for approval after all checks pass." : "Content may publish automatically to Germany, France and the USA. UGC and any flagged content will always remain manual."}</AlertDialogDescription></AlertDialogHeader>{approvalStep === 2 ? <div className="rounded-xl border border-[#efc4c8] bg-[#fff4f4] p-3 text-sm font-medium text-[#843440]">This changes live publishing behavior and will be recorded.</div> : null}<AlertDialogFooter><AlertDialogCancel>Keep approval on</AlertDialogCancel>{approvalStep === 1 ? <Button onClick={() => setApprovalStep(2)}>Yes, continue</Button> : <Button variant="destructive" onClick={disableApproval}>Turn off approval</Button>}</AlertDialogFooter></AlertDialogContent></AlertDialog><Toaster position="top-right" richColors /></SidebarProvider>;
+}

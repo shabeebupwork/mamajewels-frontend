@@ -1,0 +1,837 @@
+"use client";
+
+import {
+  AlertTriangle, Bookmark, CheckCircle2, ChevronDown, Eye, EyeOff,
+  FolderHeart, Gauge, HardDrive, Heart, Images, KeyRound, LogOut,
+  MessageCircle, Send, Settings, ShieldAlert, ShieldCheck, Sparkles,
+  Users,
+} from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuBadge,
+  SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Toaster } from "@/components/ui/sonner";
+import {
+  CarouselMediaViewer, ContentView, FailuresView, OverviewView, PageKey, PublishedView,
+  ReviewItem, SettingsView, TeamView, UgcView,
+} from "./dashboard-views";
+
+const workspaceNavigation: { key: PageKey; label: string; icon: React.ComponentType<{ className?: string }>; count?: number }[] = [
+  { key: "overview", label: "Overview", icon: Gauge },
+  { key: "content", label: "Content", icon: Images },
+  { key: "published", label: "Published", icon: CheckCircle2 },
+  { key: "ugc", label: "UGC library", icon: FolderHeart },
+  { key: "failures", label: "Failures", icon: AlertTriangle },
+];
+
+const manageNavigation: { key: PageKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: "team", label: "Team & access", icon: Users },
+  { key: "settings", label: "Integrations", icon: Settings },
+];
+
+const pageLabels: Record<PageKey, string> = {
+  overview: "Overview", content: "Content", published: "Published", ugc: "UGC library",
+  failures: "Failures", team: "Team & access", settings: "Integrations",
+};
+
+type DashboardUser = { id: number | string; name: string; email: string; role: string };
+
+function LoginScreen({ onSignIn }: { onSignIn: (user: DashboardUser) => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!email.includes("@")) {
+      toast.error("Enter a valid email address");
+      return;
+    }
+
+    if (resetMode) {
+      toast.info("Password reset is not available yet.");
+      return;
+    }
+
+    if (!password) {
+      toast.error("Enter your password");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        error?: string;
+        user?: DashboardUser;
+      };
+
+      if (!response.ok) {
+        toast.error(data.error || "Invalid email or password");
+        return;
+      }
+
+      toast.success(`Welcome, ${data.user?.name ?? "back"}`);
+      if (data.user) onSignIn(data.user);
+    } catch {
+      toast.error("Unable to sign in. Please try again.");
+    }
+  };
+  return <main className="grid min-h-screen bg-[#f6f4f7] lg:grid-cols-[.86fr_1.14fr]">
+    <style>{`@media(min-width:1024px){main>section:first-of-type{display:flex;flex-direction:column;align-items:center;justify-content:center}main>section:first-of-type>*:not(:nth-child(3)){display:none!important}}@media(max-width:1023px){main>section:nth-of-type(2)>div>div:first-child>div>p:last-child{font-size:0}main>section:nth-of-type(2)>div>div:first-child>div:after{content:"Media management";display:block;font-size:.75rem;color:#8b838e}}`}</style>
+    <style>{`main>section:first-of-type>div:nth-child(3)>div>p:last-child{font-size:0}main>section:first-of-type>div:nth-child(3)>div>p:last-child:after{content:"Media management";font-size:.75rem;color:rgba(255,255,255,.5)}main>section:nth-of-type(2)>div>div:first-child>div:first-child:after{content:none!important}main>section:nth-of-type(2)>div>div:first-child>div:last-child:after{content:"Media management";display:block;font-size:.75rem;color:#8b838e}`}</style>
+    <section className="relative hidden overflow-hidden bg-[#21152a] p-12 text-white lg:flex lg:flex-col lg:justify-between xl:p-16"><div className="absolute -right-20 -top-24 size-80 rounded-full bg-[#8e4468]/25 blur-3xl" /><div className="absolute -bottom-16 -left-24 size-96 rounded-full bg-[#f7a8c4]/10 blur-3xl" /><div className="relative flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-[#f7a8c4] text-[#21152a]"><Sparkles className="size-5" /></div><div><p className="text-lg font-semibold">MamaJewels</p><p className="text-xs text-white/50">Content operations</p></div></div><div className="relative max-w-lg"><Badge className="border border-white/15 bg-white/10 text-white">One content system · four markets</Badge><h1 className="mt-6 text-4xl font-semibold leading-[1.08] tracking-[-0.04em] xl:text-5xl">Create once in NL.<br />Operate everywhere.</h1><p className="mt-5 max-w-md text-base leading-7 text-white/60">Archive, localize, review and publish MamaJewels content while keeping UGC and safety decisions under human control.</p><div className="mt-10 grid grid-cols-3 gap-3"><div className="rounded-2xl border border-white/10 bg-white/[.05] p-4"><p className="text-2xl font-semibold">4</p><p className="mt-1 text-xs text-white/45">Instagram markets</p></div><div className="rounded-2xl border border-white/10 bg-white/[.05] p-4"><p className="text-2xl font-semibold">15</p><p className="mt-1 text-xs text-white/45">Automations</p></div><div className="rounded-2xl border border-white/10 bg-white/[.05] p-4"><p className="text-2xl font-semibold">99.2%</p><p className="mt-1 text-xs text-white/45">Workflow success</p></div></div></div><p className="relative text-xs text-white/35">Private workspace · activity is recorded in the audit log</p></section>
+    <section className="flex min-h-screen items-center justify-center p-5 sm:p-10"><div className="w-full max-w-[430px]"><div className="mb-10 flex items-center gap-3 lg:hidden"><div className="grid size-10 place-items-center rounded-2xl bg-[#21152a] text-[#f7a8c4]"><Sparkles className="size-5" /></div><div><p className="font-semibold">MamaJewels</p><p className="text-xs text-[#8b838e]">Content operations</p></div></div><div className="rounded-[26px] border border-[#e6e1e8] bg-white p-6 shadow-[0_24px_70px_rgba(39,24,48,.08)] sm:p-9"><div className="grid size-12 place-items-center rounded-2xl bg-[#f6e7ee] text-[#783b59]"><KeyRound className="size-5" /></div><h2 className="mt-6 text-2xl font-semibold tracking-tight">{resetMode ? "Reset your password" : "Welcome back"}</h2><p className="mt-2 text-sm leading-6 text-[#7d7580]">{resetMode ? "Enter your email and we’ll prepare a secure reset link." : "Sign in to manage content, approvals and publishing."}</p><form onSubmit={submit} className="mt-7 space-y-4"><div className="grid gap-2"><Label htmlFor="login-email">Email address</Label><Input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="h-11 rounded-xl" /></div>{!resetMode ? <div className="grid gap-2"><div className="flex items-center justify-between"><Label htmlFor="login-password">Password</Label><button type="button" onClick={() => setResetMode(true)} className="text-xs font-medium text-[#733651] hover:underline">Forgot password?</button></div><div className="relative"><Input id="login-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} className="h-11 rounded-xl pr-11" /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8d8590]" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></div></div> : null}<Button type="submit" className="h-11 w-full rounded-xl bg-[#632b4a] text-white hover:bg-[#4e203a]">{resetMode ? "Prepare reset link" : "Sign in"}</Button>{resetMode ? <Button type="button" variant="ghost" className="w-full" onClick={() => setResetMode(false)}>Back to sign in</Button> : null}</form></div><p className="mt-5 text-center text-xs text-[#918993]">Access is limited to approved MamaJewels team members.</p></div></section>
+  </main>;
+}
+
+function AppSidebar({ activePage, setActivePage, counts }: { activePage: PageKey; setActivePage: (page: PageKey) => void; humanApproval?: boolean; counts: { content: number; ugc: number; failures: number } }) {
+  const [role, setRole] = useState("Viewer");
+  useEffect(() => {
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = await response.json() as { user?: DashboardUser };
+        setRole(data.user?.role || "Viewer");
+      })
+      .catch(() => {});
+  }, []);
+  const isAdmin = role === "Owner" || role === "Administrator";
+  const readablePages = isAdmin
+    ? null
+    : role === "Viewer"
+      ? ["overview", "content", "published", "ugc"]
+      : ["overview", "content", "published", "ugc"];
+  const renderItem = (item: { key: PageKey; label: string; icon: React.ComponentType<{ className?: string }>; count?: number }) => {
+    const Icon = item.icon;
+    return <SidebarMenuItem key={item.key}><SidebarMenuButton onClick={() => setActivePage(item.key)} isActive={activePage === item.key} tooltip={item.label} className="h-10 rounded-xl px-3 text-white/68 hover:bg-white/10 hover:text-white data-[active=true]:bg-white data-[active=true]:text-[#21152a] data-[active=true]:shadow-sm"><Icon className="size-[18px]" /><span>{item.label}</span></SidebarMenuButton>{item.count ? <SidebarMenuBadge className={activePage === item.key ? "text-[#21152a]" : "text-white/65"}>{item.count}</SidebarMenuBadge> : null}</SidebarMenuItem>;
+  };
+  return (
+    <Sidebar collapsible="offcanvas" className="border-r-0 bg-[#21152a] text-white [&_[data-slot=sidebar-inner]]:bg-[#21152a]">
+      <SidebarHeader className="h-20 justify-center border-b border-white/10 px-5">
+        <button onClick={() => setActivePage("overview")} className="flex items-center gap-3 text-left">
+          <div className="grid size-10 place-items-center rounded-2xl bg-[#f7a8c4] text-[#21152a]"><Sparkles className="size-5" /></div>
+          <div><p className="text-[17px] font-semibold tracking-tight">MamaJewels</p><p className="text-xs text-white/50">Media management</p></div>
+        </button>
+      </SidebarHeader>
+      <SidebarContent className="px-3 py-4">
+        <SidebarGroup className="p-0">
+          <SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-[.13em] text-white/35">Workspace</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
+              {workspaceNavigation.filter((item) => (isAdmin || (readablePages?.includes(item.key) ?? false)) && (item.key !== "failures" || isAdmin)).map((item) => renderItem({ ...item, count: item.key === "content" ? counts.content : item.key === "ugc" ? counts.ugc : item.key === "failures" ? counts.failures : undefined }))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        {isAdmin ? <SidebarGroup className="mt-4 p-0">
+          <SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-[.13em] text-white/35">Manage</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">{manageNavigation.map(renderItem)}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup> : null}
+      </SidebarContent>
+      <SidebarRail />
+    </Sidebar>
+  );
+}
+
+function Header({ activePage, onSignOut: onSignedOut }: { activePage: PageKey; setActivePage: (page: PageKey) => void; onSignOut: () => void }) {
+  const [user, setUser] = useState<DashboardUser | null>(null);
+  const onSignOut = () => onSignedOut();
+  useEffect(() => {
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = (await response.json()) as { user?: DashboardUser };
+        setUser(data.user || null);
+      })
+      .catch(() => {});
+  }, []);
+  const initials = (user?.name || "User").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  return <header className="sticky top-0 z-30 flex h-20 items-center gap-3 border-b border-[#e8e5eb] bg-white/90 px-4 backdrop-blur-xl sm:px-7"><SidebarTrigger className="size-10 rounded-xl border border-[#e5e1e7]" /><div className="hidden min-w-0 items-center gap-2 text-sm text-[#8c8490] sm:flex"><span>Workspace</span><span>/</span><span className="truncate font-medium text-[#3f3942]">{pageLabels[activePage]}</span></div><div className="ml-auto" /><DropdownMenu><DropdownMenuTrigger asChild><button className="flex items-center gap-2 rounded-xl p-1.5 pr-2 hover:bg-[#f5f2f6]"><span className="grid size-9 place-items-center rounded-xl bg-[#f4d1df] text-sm font-semibold text-[#6d2448]">{initials}</span><span className="hidden text-left xl:block"><span className="block text-sm font-medium">{user?.name || "Dashboard user"}</span><span className="block text-xs text-[#8e8793]">{user?.role || "Signed in"}</span></span><ChevronDown className="hidden size-4 text-[#8e8793] sm:block" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-xl"><DropdownMenuItem variant="destructive" onClick={onSignOut}><LogOut />Sign out</DropdownMenuItem></DropdownMenuContent></DropdownMenu></header>;
+}
+
+const marketInfo = {
+  de: { tab: "Germany", account: "mamajewels.de" },
+  fr: { tab: "France", account: "mamajewels.fr" },
+  us: { tab: "USA", account: "mamajewels.usa" },
+};
+
+function InstagramPost({ item, account, caption, editable = true }: { item: ReviewItem; account: string; caption: string; editable?: boolean }) {
+  const isCarousel = item.mediaType?.toLowerCase() === "carousel";
+  const images = item.images?.length ? item.images : item.image ? [item.image] : [];
+  return <div className="mx-auto max-w-[470px] overflow-hidden rounded-xl border border-[#dedade] bg-white shadow-sm"><div className="flex items-center gap-3 p-3"><span className="grid size-9 place-items-center rounded-full bg-[#f2dce6] text-[10px] font-bold text-[#713751]">MJ</span><div className="flex-1"><p className="text-sm font-semibold">{account}</p><p className="text-[11px] text-[#918a94]">MamaJewels</p></div><span className="text-lg">•••</span></div>{isCarousel ? <CarouselMediaViewer images={images} title={item.title} /> : item.image ? item.mediaType?.toLowerCase() === "video" || item.mediaType?.toLowerCase() === "reel" ? <video src={item.image} controls playsInline preload="metadata" className="aspect-square w-full bg-black object-contain" aria-label={item.title} /> : <img src={item.image} alt={item.title} className="aspect-square w-full object-cover" /> : <div className="grid aspect-square w-full place-items-center bg-[#f3eff3] text-sm text-[#827a84]">Media unavailable</div>}<div className="p-3"><div className="flex items-center gap-4"><Heart className="size-6" /><MessageCircle className="size-6" /><Send className="size-6" /><Bookmark className="ml-auto size-6" /></div><p className="mt-3 text-sm font-semibold">1,248 likes</p>{editable ? <div className="mt-2"><Label className="mb-2 block text-xs text-[#8f8792]">Edit caption</Label><Textarea defaultValue={caption} className="min-h-24 resize-none rounded-xl border-[#e6e2e7] text-sm leading-5" /></div> : <p className="mt-2 whitespace-pre-wrap text-sm leading-5"><span className="font-semibold">{account}</span> {caption}</p>}<p className="mt-2 text-[10px] uppercase text-[#a39ca5]">{item.capturedLabel}</p></div></div>;
+}
+
+function DriveArchiveLinks({ item }: { item: ReviewItem }) {
+  const fileIds = item.driveFileIds?.length ? item.driveFileIds : item.driveFileId ? [item.driveFileId] : [];
+  if (!fileIds.length) return <Button variant="outline" size="sm" disabled>File unavailable</Button>;
+  return <div className="flex flex-wrap justify-end gap-2">{fileIds.map((fileId, index) => <Button key={fileId} asChild variant="outline" size="sm"><a href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`} target="_blank" rel="noreferrer"><HardDrive className="size-4" />{item.mediaType?.toLowerCase() === "carousel" ? `Image ${index + 1}` : "Open file"}</a></Button>)}</div>;
+}
+
+function ContentReviewSheet({
+  item,
+  readOnly = false,
+  onClose,
+  onApproved,
+  canReview,
+}: {
+  item: ReviewItem | null;
+  readOnly?: boolean;
+  onClose: () => void;
+  onApproved: () => void;
+  canReview: boolean;
+}) {
+  const [editedCaptions, setEditedCaptions] = useState<
+    Record<string, string>
+  >({});
+  const [ugcCaption, setUgcCaption] = useState("");
+  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
+  const [republishMarkets, setRepublishMarkets] = useState<string[]>([]);
+  const [republishWarningOpen, setRepublishWarningOpen] = useState(false);
+  const [approving, setApproving] = useState(false);
+  useEffect(() => {
+    setUgcCaption(item?.caption || "");
+    setSelectedMarkets(item?.localizations?.map((entry) => entry.market.toUpperCase()).filter((market) => ["DE", "FR", "US"].includes(market)) || []);
+  }, [item?.id, item?.caption]);
+  if (!item) return null;
+
+  const isUgc = item.kind === "ugc";
+  const canEdit = canReview && !readOnly;
+  const approvalMarkets = ["DE", "FR", "US"];
+  const localizations = item.localizations || [];
+  const publishApprovals = async (markets: string[]) => {
+    setApproving(true);
+    try {
+      const response = await fetch("/api/content/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentId: item.id, markets }),
+      });
+      const data = (await response.json()) as { error?: string; markets?: string[] };
+      if (!response.ok) throw new Error(data.error || "Approval failed");
+      toast.success(`${(data.markets || markets).join(", ")} approved`);
+      setRepublishWarningOpen(false);
+      onClose();
+      onApproved();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to approve markets");
+    } finally {
+      setApproving(false);
+    }
+  };
+  const requestApproval = (markets: string[]) => {
+    const available = markets.filter((market) => localizations.some((entry) => entry.market.toUpperCase() === market));
+    if (available.length === 0) {
+      toast.error("No localized variants are available for the selected markets");
+      return;
+    }
+    const alreadyPublished = available.filter((market) =>
+      localizations.some((entry) => entry.market.toUpperCase() === market && entry.status.toLowerCase() === "published")
+    );
+    if (alreadyPublished.length > 0) {
+      setRepublishMarkets(available);
+      setRepublishWarningOpen(true);
+      return;
+    }
+    void publishApprovals(available);
+  };
+
+  return (
+    <>
+    <style>{`div[class*="max-w-[470px]"] > div.p-3 > p.mt-2.text-sm.leading-5{white-space:pre-wrap}`}</style>
+    <Sheet
+      open={Boolean(item)}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-[760px]">
+        <SheetHeader className="border-b border-[#e8e4ea] p-5 pr-14">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline">{item.id}</Badge>
+
+            <Badge
+              className={`${
+                isUgc
+                  ? "bg-[#fff2d5] text-[#79530b]"
+                  : "bg-[#eaf1ff] text-[#315f9f]"
+              } border-0`}
+            >
+              {isUgc ? "Manual UGC review" : item.status}
+            </Badge>
+          </div>
+
+          <SheetTitle className="sr-only">
+            {item.title}
+          </SheetTitle>
+
+          <SheetDescription className="sr-only">
+            {item.source} · {item.type} · captured {item.capturedLabel}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="p-5">
+          {isUgc ? (
+            <div className="space-y-5">
+              <InstagramPost item={item} account={item.title.split("by ")[1] || "creator"} caption={ugcCaption} editable={false} />
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!canEdit}
+                  className="border-[#efc4c8] text-[#9b3340] hover:bg-[#fff4f4]"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch("/api/ugc/update", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: item.id, status: "rejected" }),
+                      });
+                      const data = await response.json() as { error?: string };
+                      if (!response.ok) throw new Error(data.error || "Failed to reject UGC");
+                      toast.success("UGC rejected");
+                      onClose();
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to reject UGC");
+                    }
+                  }}
+                >
+                  Rejected
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label>Caption</Label>
+                <Textarea
+                  value={ugcCaption}
+                  onChange={(event) => {
+                    setUgcCaption(event.target.value);
+                  }}
+                  disabled={!canEdit}
+                  className="min-h-[140px] rounded-xl"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {isUgc ? null : (
+            <Tabs defaultValue="de">
+              <TabsList className="sticky top-0 z-10 grid w-full grid-cols-3 bg-[#f4f1f4]">
+                <TabsTrigger value="de">Germany</TabsTrigger>
+                <TabsTrigger value="fr">France</TabsTrigger>
+                <TabsTrigger value="us">USA</TabsTrigger>
+              </TabsList>
+
+              {(["de", "fr", "us"] as const).map((key) => {
+                const market = marketInfo[key];
+
+                const localization = item.localizations?.find(
+                  (entry) =>
+                    entry.market.toLowerCase() === key
+                );
+
+                const caption =
+                  editedCaptions[key] ??
+                  localization?.caption ??
+                  "";
+
+                return (
+                  <TabsContent
+                    key={key}
+                    value={key}
+                    className="mt-5 space-y-4"
+                  >
+                    <InstagramPost
+                      item={item}
+                      account={market.account}
+                      caption={caption}
+                      editable={false}
+                    />
+
+                    <div className="space-y-2">
+                      <Label>Caption</Label>
+
+                      <Textarea
+                        value={caption}
+                        disabled={!canEdit}
+                        onChange={(event) =>
+                          setEditedCaptions((current) => ({
+                            ...current,
+                            [key]: event.target.value,
+                          }))
+                        }
+                        placeholder="Enter localized caption"
+                        className="min-h-[140px] rounded-xl"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        [
+                          "Language",
+                          localization
+                            ? "Available"
+                            : "Not created",
+                        ],
+                        ["Dutch text", "None"],
+                        ["Dutch speech", "None"],
+                      ].map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="rounded-xl bg-[#faf9fb] p-3"
+                        >
+                          <p className="text-xs text-[#8d8590]">
+                            {label}
+                          </p>
+
+                          <p className="mt-1 text-sm font-medium">
+                            {value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </TabsContent>
+                );
+              })}
+            </Tabs>
+          )}
+
+          <div className="mt-5 flex items-center justify-between rounded-xl border border-[#e9e5ea] p-4">
+            <div>
+              <p className="text-sm font-semibold">
+                Google Drive archive
+              </p>
+
+              <p className="mt-1 text-xs text-[#8d8590]">
+                Original media, caption and metadata are stored safely.
+              </p>
+            </div>
+
+              <DriveArchiveLinks item={item} />
+          </div>
+        </div>
+
+        {!readOnly ? <SheetFooter className="sticky bottom-0 border-t border-[#e8e4ea] bg-white/95 p-5 backdrop-blur">
+          {isUgc ? (
+            <div className="flex w-full gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={!canReview}
+                onClick={async () => {
+                  try {
+                    const response = await fetch("/api/ugc/update", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        id: item.id,
+                        caption: ugcCaption,
+                      }),
+                    });
+
+                    const data = await response.json() as { error?: string };
+                    if (!response.ok) throw new Error(data.error || "Failed to save UGC changes");
+
+                    toast.success("Caption saved");
+                  } catch (error) {
+                    console.error("UGC save error:", error);
+                    toast.error(error instanceof Error ? error.message : "Failed to save caption");
+                  }
+                }}
+              >
+                Save edits
+              </Button>
+
+              <Button
+                className="flex-1"
+                disabled={!canReview}
+                onClick={async () => {
+                  try {
+                    const response = await fetch("/api/ugc/update", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        id: item.id,
+                        caption: ugcCaption,
+                        status: "generating",
+                      }),
+                    });
+
+                    const data = await response.json() as { error?: string };
+                    if (!response.ok) throw new Error(data.error || "Failed to start content generation");
+                    toast.success("Content generation started");
+                    onClose();
+                  } catch (error) {
+                    console.error("UGC generation error:", error);
+                    toast.error(error instanceof Error ? error.message : "Failed to start content generation");
+                  }
+                }}
+              >
+                Generate content
+              </Button>
+            </div>
+          ) : (
+            <div className="grid w-full gap-3">
+              <div className="grid grid-cols-3 gap-2">{approvalMarkets.map((market) => {
+                const localization = localizations.find((entry) => entry.market.toUpperCase() === market);
+                const checked = selectedMarkets.includes(market);
+                return <label key={market} className={`flex min-w-0 items-center gap-2 rounded-lg border p-2.5 text-sm ${localization ? "cursor-pointer border-[#e5e1e7]" : "cursor-not-allowed border-[#eeeaf0] text-[#aaa3ac]"}`}>
+                  <input type="checkbox" checked={checked} disabled={!localization || !canEdit} onChange={(event) => setSelectedMarkets((current) => event.target.checked ? [...new Set([...current, market])] : current.filter((entry) => entry !== market))} className="size-4 accent-[#632b4a]" />
+                  <span className="font-medium">{market}</span>
+                  <span className="ml-auto truncate text-[11px] text-[#8d8590]">{localization ? localization.status || "Ready" : "—"}</span>
+                </label>;
+              })}</div>
+              <div className="flex w-full gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={!canEdit}
+                onClick={async () => {
+                  try {
+                    const markets = ["de", "fr", "us"] as const;
+
+                    for (const key of markets) {
+                      const localization =
+                        item.localizations?.find(
+                          (entry) =>
+                            entry.market.toLowerCase() === key
+                        );
+
+                      const caption =
+                        editedCaptions[key] ??
+                        localization?.caption ??
+                        "";
+
+                      if (
+                        !localization ||
+                        !caption.trim()
+                      ) {
+                        continue;
+                      }
+
+                      const response = await fetch(
+                        "/api/content/localization",
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type":
+                              "application/json",
+                          },
+                          body: JSON.stringify({
+                            contentId: item.id,
+                            market: key.toUpperCase(),
+                            caption,
+                          }),
+                        }
+                      );
+
+                      if (!response.ok) {
+                        throw new Error(
+                          `Failed to save ${key.toUpperCase()} caption`
+                        );
+                      }
+                    }
+
+                    toast.success(
+                      "Caption changes saved"
+                    );
+                  } catch (error) {
+                    console.error(
+                      "Save caption error:",
+                      error
+                    );
+
+                    toast.error(
+                      "Failed to save caption"
+                    );
+                  }
+                }}
+              >
+                Save edits
+              </Button>
+
+              <Button
+                className="flex-1"
+                disabled={!canEdit || approving || selectedMarkets.length === 0}
+                onClick={() => requestApproval(selectedMarkets)}
+              >
+                <CheckCircle2 className="size-4" />
+                Approve selected ({selectedMarkets.length})
+              </Button>
+              </div>
+            </div>
+          )}
+        </SheetFooter> : null}
+      </SheetContent>
+    </Sheet>
+    <AlertDialog open={republishWarningOpen && !readOnly} onOpenChange={setRepublishWarningOpen}>
+      <AlertDialogContent className="rounded-xl">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-[#fff2d5] text-[#8a641a]"><AlertTriangle /></AlertDialogMedia>
+          <AlertDialogTitle>Already published</AlertDialogTitle>
+          <AlertDialogDescription>Some selected markets ({republishMarkets.join(", ")}) are already published. Do you want to approve them again for republishing?</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={approving}>Cancel</AlertDialogCancel>
+          <Button disabled={approving} onClick={() => void publishApprovals(republishMarkets)}>{approving ? "Approving…" : "Republish"}</Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
+  );
+}
+export default function DashboardClient() {
+  const [signedIn, setSignedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<DashboardUser | null>(null);
+  const [activePage, setActivePage] = useState<PageKey>("overview");
+  const [humanApproval, setHumanApproval] = useState(true);
+  const [internationalPublishing, setInternationalPublishing] = useState(true);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [approvalStep, setApprovalStep] = useState<1 | 2>(1);
+  const [selectedItem, setSelectedItem] = useState<ReviewItem | null>(null);
+  const [reviewReadOnly, setReviewReadOnly] = useState(false);
+  const [dbContentItems, setDbContentItems] = useState<ReviewItem[]>([]);
+  const [publishedItems, setPublishedItems] = useState<any[]>([]);
+  const [dbUgcItems, setDbUgcItems] = useState<ReviewItem[]>([]);
+  const [failureItems, setFailureItems] = useState<any[]>([]);
+  const safeFailureItems = Array.isArray(failureItems) ? failureItems : [];
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (response) => {
+        if (active && response.ok) {
+          const data = (await response.json()) as { user?: DashboardUser };
+          setCurrentUser(data.user || null);
+          setSignedIn(true);
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    let active = true;
+    fetch("/api/settings", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const settings = (await response.json()) as { humanApproval?: boolean; internationalPublishing?: boolean };
+        if (active) {
+          if (typeof settings.humanApproval === "boolean") setHumanApproval(settings.humanApproval);
+          if (typeof settings.internationalPublishing === "boolean") setInternationalPublishing(settings.internationalPublishing);
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [signedIn]);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    const modelContext = (document as Document & { modelContext?: { registerTool: (tool: unknown, options?: { signal?: AbortSignal }) => unknown } }).modelContext;
+    if (!modelContext?.registerTool) return;
+    const lifecycle = new AbortController();
+    const register = (tool: unknown) => { try { void Promise.resolve(modelContext.registerTool(tool, { signal: lifecycle.signal })).catch(() => {}); } catch {} };
+    register({ name: "get_content_operations_status", title: "Get content operations status", description: "Read current publishing and approval status.", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, untrustedContentHint: false }, execute: async () => ({ pendingApproval: dbContentItems.filter((item) => ["draft", "pending", "ready for approval"].includes(item.status.toLowerCase())).length, totalPublished: publishedItems.length, newUgc: dbUgcItems.length, failures: safeFailureItems.filter((failure) => String(failure.status).toLowerCase() !== "resolved").length, humanApproval }) });
+    register({ name: "navigate_content_operations", title: "Open a dashboard section", description: "Navigate to a MamaJewels dashboard section.", inputSchema: { type: "object", properties: { page: { type: "string", enum: Object.keys(pageLabels) } }, required: ["page"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async (input: unknown) => { const page = (input as { page?: PageKey })?.page; if (!page || !(page in pageLabels)) throw new Error("Unknown dashboard page"); setActivePage(page); return { page, label: pageLabels[page] }; } });
+    register({ name: "open_content_review", title: "Open a content item", description: "Open a content item in the preview and editing panel.", inputSchema: { type: "object", properties: { contentId: { type: "string" } }, required: ["contentId"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async (input: unknown) => { const id = (input as { contentId?: string })?.contentId; const item = dbContentItems.find((entry) => entry.id === id); if (!item) throw new Error("Content item not found"); setReviewReadOnly(false); setSelectedItem(item); return { contentId: item.id, title: item.title, status: item.status }; } });
+    return () => lifecycle.abort();
+  }, [humanApproval, signedIn, dbContentItems, publishedItems, dbUgcItems, failureItems]);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    fetch("/api/content")
+      .then((res) => res.json())
+      .then((data) => setDbContentItems(data as ReviewItem[]))
+      .catch((error) => console.error("Failed to load content:", error));
+  }, [signedIn]);
+  useEffect(() => {
+  if (!signedIn) return;
+  fetch("/api/ugc")
+    .then((res) => res.json())
+    .then((data) => setDbUgcItems(data as ReviewItem[]))
+    .catch((error) => console.error("Failed to load UGC:", error));
+  }, [signedIn]);
+  useEffect(() => {
+  if (!signedIn) return;
+  fetch("/api/published")
+    .then((res) => res.json())
+    .then((data) => setPublishedItems(data as any[]))
+    .catch((error) =>
+      console.error("Failed to load published content:", error)
+    );
+  }, [signedIn]);
+  useEffect(() => {
+    if (!signedIn) return;
+    if (currentUser?.role !== "Owner" && currentUser?.role !== "Administrator") {
+      setFailureItems([]);
+      return;
+    }
+    fetch("/api/failures", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed to load failures");
+        const data: unknown = await response.json();
+        setFailureItems(Array.isArray(data) ? data : []);
+      })
+      .catch((error) => {
+        setFailureItems([]);
+        console.error("Failed to load failures:", error);
+      });
+  }, [signedIn, currentUser?.role]);
+  const saveSetting = async (setting: "humanApproval" | "internationalPublishing", enabled: boolean) => {
+    const response = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ setting, enabled }),
+    });
+    const data = (await response.json()) as { error?: string };
+    if (!response.ok) throw new Error(data.error || "Unable to save setting");
+  };
+  const changeApproval = async (enabled: boolean) => {
+    if (enabled) {
+      try {
+        await saveSetting("humanApproval", true);
+        setHumanApproval(true);
+        toast.success("Human approval turned on");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to turn on approval");
+      }
+      return;
+    }
+    setApprovalStep(1); setApprovalDialogOpen(true);
+  };
+  const disableApproval = async () => {
+    try {
+      await saveSetting("humanApproval", false);
+      setHumanApproval(false);
+      setApprovalDialogOpen(false);
+      setApprovalStep(1);
+      toast.warning("Human approval is off for eligible owned content");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to turn off approval");
+    }
+  };
+  const changePublishing = async (enabled: boolean) => {
+    try {
+      await saveSetting("internationalPublishing", enabled);
+      setInternationalPublishing(enabled);
+      toast.success(`International publishing ${enabled ? "enabled" : "paused"}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update publishing");
+    }
+  };
+  if (!signedIn) return <><LoginScreen onSignIn={(user) => { setCurrentUser(user); setSignedIn(true); toast.success("Signed in securely"); }} /><Toaster position="top-right" /></>;
+  const refreshUgcItems = async () => {
+    try {
+      const response = await fetch("/api/ugc");
+
+      if (!response.ok) {
+        throw new Error("Failed to refresh UGC");
+      }
+
+      const data = await response.json();
+      setDbUgcItems(data as ReviewItem[]);
+    } catch (error) {
+      console.error("Failed to refresh UGC:", error);
+    }
+  };
+  const refreshFailureItems = async () => {
+    try {
+      const response = await fetch("/api/failures");
+
+      if (!response.ok) {
+        throw new Error("Failed to refresh failures");
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error("Invalid failures response");
+      setFailureItems(data as any[]);
+    } catch (error) {
+      console.error("Failed to refresh failures:", error);
+    }
+  };
+
+  const renderPage = () => {
+    const role = currentUser?.role || "Viewer";
+    const isAdmin = role === "Owner" || role === "Administrator";
+    const readablePages = role === "Viewer"
+      ? ["overview", "content", "published", "ugc"]
+      : ["overview", "content", "published", "ugc"];
+    if (!isAdmin && !readablePages.includes(activePage)) {
+      return <div className="mt-10 rounded-lg border border-[#e5e1e7] bg-white p-6 text-sm text-[#746c77]">Your account does not have access to this section.</div>;
+    }
+    if (activePage === "overview") return <OverviewView onOpen={setSelectedItem} onNavigate={setActivePage} items={dbContentItems} userName={currentUser?.name || ""} />;
+    if (activePage === "content") return <ContentView items={dbContentItems} onOpen={(item) => { setReviewReadOnly(false); setSelectedItem(item); }} />;
+    if (activePage === "published") return <PublishedView items={publishedItems} onOpen={(published) => {
+      const content = dbContentItems.find((item) => item.id === String(published.contentId));
+      const market = String(published.market || "").toUpperCase();
+      const fallback: ReviewItem = {
+        id: String(published.contentId),
+        title: String(published.title || `Content ${published.contentId}`),
+        type: published.mediaType?.toLowerCase() === "video" || published.mediaType?.toLowerCase() === "reel" ? "Reel" : published.type?.toLowerCase() === "carousel" ? "Carousel" : "Image",
+        status: "Published",
+        mediaType: published.mediaType || "image",
+        driveFileId: published.driveFileId || null,
+        driveFileIds: published.driveFileIds || (published.driveFileId ? [published.driveFileId] : []),
+        images: published.images || (published.image ? [published.image] : []),
+        capturedAt: published.capturedAt || "",
+        capturedLabel: published.capturedLabel || "",
+        source: published.source || "",
+        market,
+        markets: market ? [market] : [],
+        image: published.image || "",
+        caption: published.caption || "",
+        kind: "owned",
+        localizations: [{ market, caption: published.caption || "", status: "published", approved_by: null, approved_at: null, published_at: published.publishedAt || null, meta_media_id: published.metaMediaId || null }],
+      };
+      setReviewReadOnly(true);
+      setSelectedItem(content ? { ...content, status: "Published", market } : fallback);
+    }} />;
+    if (activePage === "ugc") return <UgcView items={dbUgcItems} onOpen={(item) => { setReviewReadOnly(false); setSelectedItem(item); }} />;
+    if (activePage === "failures") return <FailuresView items={failureItems} onRetry={refreshFailureItems} />;
+    if (activePage === "team") return <TeamView isOwner={currentUser?.role === "Owner"} />;
+    return <SettingsView />;
+  };
+
+  return <SidebarProvider style={{ "--sidebar-width": "16.25rem" } as React.CSSProperties}><AppSidebar activePage={activePage} setActivePage={setActivePage} humanApproval={humanApproval} counts={{ content: dbContentItems.length, ugc: dbUgcItems.length, failures: failureItems.filter((failure) => String(failure.status).toLowerCase() !== "resolved").length }} /><SidebarInset className="min-w-0 bg-[#f7f7f8]"><Header activePage={activePage} setActivePage={setActivePage} onSignOut={async () => { try { const response = await fetch("/api/auth/logout", { method: "POST" }); if (!response.ok) throw new Error(); setSignedIn(false); setCurrentUser(null); setActivePage("overview"); toast.success("Signed out"); } catch { toast.error("Unable to sign out. Please try again."); } }} />{!humanApproval ? <button onClick={() => setActivePage("settings")} className="flex w-full items-center justify-center gap-2 border-b border-[#e9b5bc] bg-[#fff1f2] px-4 py-2.5 text-center text-sm font-medium text-[#933241]"><ShieldAlert className="size-4" />Human approval is OFF. Eligible owned content can publish automatically. UGC remains manual.<span className="underline underline-offset-2">Review settings</span></button> : null}<div className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-7 sm:px-7 lg:py-9">{renderPage()}</div></SidebarInset><ContentReviewSheet
+  item={selectedItem}
+  readOnly={reviewReadOnly}
+  canReview={currentUser?.role === "Owner" || currentUser?.role === "Administrator" || currentUser?.role === "Editor and approver"}
+  onClose={() => {
+    setSelectedItem(null);
+    setReviewReadOnly(false);
+    refreshUgcItems();
+  }}
+  onApproved={async () => {
+    const response = await fetch("/api/content");
+    const data = await response.json();
+    setDbContentItems(data as ReviewItem[]);
+  }}
+/><AlertDialog open={approvalDialogOpen} onOpenChange={(open) => { setApprovalDialogOpen(open); if (!open) setApprovalStep(1); }}><AlertDialogContent className="rounded-2xl"><AlertDialogHeader><AlertDialogMedia className={approvalStep === 1 ? "bg-[#fff2d5] text-[#8a641a]" : "bg-[#fdebec] text-[#a33442]"}>{approvalStep === 1 ? <ShieldAlert /> : <AlertTriangle />}</AlertDialogMedia><AlertDialogTitle>{approvalStep === 1 ? "Turn off human approval?" : "Final confirmation"}</AlertDialogTitle><AlertDialogDescription className="leading-6">{approvalStep === 1 ? "Eligible MamaJewels-owned content will no longer wait for approval after all checks pass." : "Content may publish automatically to Germany, France and the USA. UGC and any flagged content will always remain manual."}</AlertDialogDescription></AlertDialogHeader>{approvalStep === 2 ? <div className="rounded-xl border border-[#efc4c8] bg-[#fff4f4] p-3 text-sm font-medium text-[#843440]">This changes live publishing behavior and will be recorded.</div> : null}<AlertDialogFooter><AlertDialogCancel>Keep approval on</AlertDialogCancel>{approvalStep === 1 ? <Button onClick={() => setApprovalStep(2)}>Yes, continue</Button> : <Button variant="destructive" onClick={disableApproval}>Turn Off Approval and Enable Automatic Publishing</Button>}</AlertDialogFooter></AlertDialogContent></AlertDialog><Toaster position="top-right" richColors /></SidebarProvider>;
+}
