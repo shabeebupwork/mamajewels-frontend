@@ -21,7 +21,7 @@ export async function GET() {
         created_at,
         updated_at
       FROM publish_jobs
-      WHERE status = 'published'
+      WHERE status IN ('published', 'selected')
       ORDER BY published_at DESC NULLS LAST, created_at DESC
       LIMIT 100
     `);

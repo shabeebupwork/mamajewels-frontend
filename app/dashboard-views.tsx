@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export type PageKey = "overview" | "content" | "published" | "ugc" | "failures" | "team" | "settings";
+export type PageKey = "overview" | "content" | "ugc_content" | "published" | "ugc" | "team" | "settings";
 
 export type ReviewItem = {
   id: string;
@@ -103,22 +103,176 @@ function PageTitle({ eyebrow, title, description, action }: { eyebrow?: string; 
   </div>;
 }
 
+import { Download, Maximize2, X } from "lucide-react";
+
 export function CarouselMediaViewer({ images, title, className = "" }: { images: string[]; title: string; className?: string }) {
   const media = images.filter(Boolean);
   const mediaKey = media.join("|");
   const [index, setIndex] = useState(0);
-  useEffect(() => setIndex(0), [mediaKey]);
-  if (!media.length) return <div className={`grid aspect-square place-items-center bg-[#f3eff3] text-sm text-[#827a84] ${className}`}>Media unavailable</div>;
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  return <div className={`relative aspect-square overflow-hidden bg-black ${className}`}>
-    <img src={media[index % media.length]} alt={`${title} image ${index + 1}`} className="h-full w-full object-contain" />
-    {media.length > 1 ? <>
-      <button type="button" onClick={() => setIndex((current) => (current - 1 + media.length) % media.length)} aria-label="Previous image" title="Previous image" className="absolute left-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white hover:bg-black/75"><ChevronLeft className="size-5" /></button>
-      <button type="button" onClick={() => setIndex((current) => (current + 1) % media.length)} aria-label="Next image" title="Next image" className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white hover:bg-black/75"><ChevronRight className="size-5" /></button>
-      <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white">{index + 1} / {media.length}</span>
-    </> : null}
-  </div>;
+  useEffect(() => setIndex(0), [mediaKey]);
+
+  // Preload next and previous images for instant switching
+  useEffect(() => {
+    if (media.length > 1) {
+      const nextImg = new Image();
+      nextImg.src = media[(index + 1) % media.length];
+      const prevImg = new Image();
+      prevImg.src = media[(index - 1 + media.length) % media.length];
+    }
+  }, [index, media]);
+
+  // Keyboard navigation for fullscreen
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+      if (e.key === "ArrowRight") setIndex((current) => (current + 1) % media.length);
+      if (e.key === "ArrowLeft") setIndex((current) => (current - 1 + media.length) % media.length);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isFullscreen, media.length]);
+
+  const downloadCurrentImage = async (url: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${title.toLowerCase().replace(/[^a-z0-9]/g, "-")}-image-${index + 1}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(url, "_blank");
+    }
+  };
+
+  if (!media.length) {
+    return <div className={`grid aspect-square place-items-center bg-[#f3eff3] text-sm text-[#827a84] ${className}`}>Media unavailable</div>;
+  }
+
+  const currentUrl = media[index % media.length];
+
+  return (
+    <>
+      <div className={`group relative aspect-square overflow-hidden bg-black ${className}`}>
+        <img
+          src={currentUrl}
+          alt={`${title} image ${index + 1}`}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className="h-full w-full object-contain"
+        />
+
+        {/* Top-right Action Buttons: Fullscreen & Download */}
+        <div className="absolute right-2 top-2 flex items-center gap-1.5 opacity-90 transition-opacity group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={() => downloadCurrentImage(currentUrl)}
+            aria-label="Download image"
+            title="Download image"
+            className="grid size-8 place-items-center rounded-full bg-black/60 text-white hover:bg-black/85"
+          >
+            <Download className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(true)}
+            aria-label="Full screen"
+            title="Full screen"
+            className="grid size-8 place-items-center rounded-full bg-black/60 text-white hover:bg-black/85"
+          >
+            <Maximize2 className="size-4" />
+          </button>
+        </div>
+
+        {media.length > 1 ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setIndex((current) => (current - 1 + media.length) % media.length)}
+              aria-label="Previous image"
+              className="absolute left-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white hover:bg-black/75"
+            >
+              <ChevronLeft className="size-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIndex((current) => (current + 1) % media.length)}
+              aria-label="Next image"
+              className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white hover:bg-black/75"
+            >
+              <ChevronRight className="size-5" />
+            </button>
+            <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white">
+              {index + 1} / {media.length}
+            </span>
+          </>
+        ) : null}
+      </div>
+
+      {/* Fullscreen Lightbox Modal */}
+      {isFullscreen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm">
+          {/* Top Controls */}
+          <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => downloadCurrentImage(currentUrl)}
+              className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20"
+            >
+              <Download className="size-4" /> Download
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(false)}
+              className="grid size-8 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+
+          <img
+            src={currentUrl}
+            alt={`${title} fullscreen image`}
+            decoding="async"
+            referrerPolicy="no-referrer"
+            className="max-h-[90vh] max-w-[90vw] select-none object-contain"
+          />
+
+          {media.length > 1 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setIndex((current) => (current - 1 + media.length) % media.length)}
+                className="absolute left-4 top-1/2 grid size-12 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/25"
+              >
+                <ChevronLeft className="size-7" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIndex((current) => (current + 1) % media.length)}
+                className="absolute right-4 top-1/2 grid size-12 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/25"
+              >
+                <ChevronRight className="size-7" />
+              </button>
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-4 py-1.5 text-xs text-white">
+                {index + 1} / {media.length}
+              </div>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
 }
+
 
 function MetricCard({ label, value, note, icon: Icon, dark = false }: { label: string; value: string; note: string; icon: React.ComponentType<{ className?: string }>; dark?: boolean }) {
   return <article className={`rounded-2xl border p-5 shadow-[0_3px_16px_rgba(39,24,48,.035)] ${dark ? "border-[#2d1c36] bg-[#2d1c36] text-white" : "border-[#e8e4ea] bg-white"}`}>
@@ -193,60 +347,26 @@ export function OverviewView({
         ))}
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-2">
-        <article className="rounded-2xl border border-[#e8e4ea] bg-white p-5">
-          <div className="flex items-center justify-between">
-            <div><h2 className="text-sm font-semibold">Publishing accounts</h2><p className="mt-1 text-xs text-[#8f8792]">Connected Meta accounts</p></div>
-            <Globe2 className="size-5 text-[#724b66]" />
-          </div>
-          <div className="mt-5 space-y-3">
-            {(overview?.publishingAccounts || []).map(({ market, accountName, status }) => <div key={`${market}-${accountName}`} className="flex items-center gap-3 text-sm"><span className="grid size-8 place-items-center rounded-lg bg-[#f5f1f5] text-xs font-semibold">{market || "IG"}</span><span className="flex-1 text-[#746d77]">{accountName || "Instagram account"}</span><span className="text-xs text-[#746d77]">{status || "Configured"}</span></div>)}
-            {!overview?.publishingAccounts.length ? <p className="text-sm text-[#8f8792]">No Meta accounts configured.</p> : null}
-          </div>
-        </article>
-
-        <div className="grid gap-5">
-          <article className="rounded-2xl bg-[#2d1c36] p-5 text-white shadow-[0_12px_32px_rgba(33,21,42,.16)]">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-white/55">
-                  Automation
-                </p>
-                <h2 className="mt-1 text-xl font-semibold">
-                  {overview?.openFailures ? "Failures need attention" : "No open failures"}
-                </h2>
-              </div>
-              <span className={`mt-1 size-2.5 rounded-full ${overview?.openFailures ? "bg-[#f3a7aa]" : "bg-[#79dfaa]"}`} />
-            </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-xl bg-white/[.06] p-3">
-                <p className="text-xl font-semibold">{overview?.publishingAccounts.length ?? 0}</p>
-                <p className="mt-1 text-[11px] text-white/45">Accounts</p>
-              </div>
-              <button onClick={() => onNavigate("failures")} className="rounded-xl bg-white/[.06] p-3 text-center">
-                <p className="text-xl font-semibold">{overview?.openFailures ?? "—"}</p>
-                <p className="mt-1 text-[11px] text-white/45">Open failures</p>
-              </button>
-              <div className="rounded-xl bg-white/[.06] p-3">
-                <p className="text-xl font-semibold">
-                  {overview?.published7d ?? 0}
-                </p>
-                <p className="mt-1 text-[11px] text-white/45">Published / 7d</p>
-              </div>
-            </div>
-          </article>
-
-        </div>
-      </div>
+      
     </>
   );
 }
 
 type SortKey = "title" | "source" | "status" | "markets" | "type" | "capturedAt";
 
-export function ContentView({ title = "Content", description = "Review, edit and track NL content across Germany, France and the USA.", items = contentItems, onOpen }: { title?: string; description?: string; items?: ReviewItem[]; onOpen: (item: ReviewItem) => void }) {
-  const [contentGroup, setContentGroup] = useState<"nl" | "ugc">("nl");
+export function ContentView({
+  title = "NL Content",
+  description = "Review, edit and track NL content across Germany, France and the USA.",
+  items = contentItems,
+  onOpen,
+  mode = "nl",
+}: {
+  title?: string;
+  description?: string;
+  items?: ReviewItem[];
+  onOpen: (item: ReviewItem) => void;
+  mode?: "nl" | "ugc";
+}) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
@@ -258,20 +378,73 @@ export function ContentView({ title = "Content", description = "Review, edit and
     else { setSortKey(key); setSortDirection("asc"); }
   };
   const filtered = useMemo(() => items
-    .filter((item) => contentGroup === "nl"
+    .filter((item) => mode === "nl"
       ? item.source.toLowerCase().includes("@mamajewels.nl")
       : !item.source.toLowerCase().includes("@mamajewels.nl"))
-    .filter((item) => item.status.trim().toLowerCase() !== "published")
+    .filter((item) => !["published", "selected"].includes(item.status.trim().toLowerCase()))
     .filter((item) => `${item.title} ${item.id} ${item.source}`.toLowerCase().includes(search.toLowerCase()))
     .filter((item) => status === "all" || (status === "review" ? item.status.toLowerCase().replace(/[\s-]+/g, "_") === "ready_for_approval" : item.status.toLowerCase().includes("failure")))
     .filter((item) => type === "all" || item.type === type)
     .filter((item) => market === "all" || item.markets.includes(market))
-    .sort((a, b) => String(a[sortKey]).localeCompare(String(b[sortKey])) * (sortDirection === "asc" ? 1 : -1)), [contentGroup, items, market, search, sortDirection, sortKey, status, type]);
+    .sort((a, b) => String(a[sortKey]).localeCompare(String(b[sortKey])) * (sortDirection === "asc" ? 1 : -1)), [items, market, mode, search, sortDirection, sortKey, status, type]);
   const SortHead = ({ label, column, className = "" }: { label: string; column: SortKey; className?: string }) => <TableHead className={className}><button onClick={() => toggleSort(column)} className="flex items-center gap-1.5 font-medium">{label}<ArrowUpDown className={`size-3.5 ${sortKey === column ? "text-[#6f3150]" : "text-[#aaa3ac]"}`} /></button></TableHead>;
   return <>
     <PageTitle title={title} description={description} />
     <article className="mt-7 overflow-hidden rounded-2xl border border-[#e8e4ea] bg-white shadow-[0_3px_16px_rgba(39,24,48,.035)]">
-      <div className="grid gap-3 border-b border-[#eeeaf0] p-4 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_repeat(4,150px)]"><div className="relative"><Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#978f9a]" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search content, ID or source" className="h-10 rounded-xl border-[#e5e1e7] bg-[#faf9fb] pl-10" /></div><Select value={contentGroup} onValueChange={(value) => setContentGroup(value as "nl" | "ugc")}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="nl">NL Content</SelectItem><SelectItem value="ugc">UGC Content</SelectItem></SelectContent></Select><Select value={status} onValueChange={setStatus}><SelectTrigger className="rounded-xl"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="review">Needs Review</SelectItem><SelectItem value="failed">Failed</SelectItem></SelectContent></Select><Select value={type} onValueChange={setType}><SelectTrigger className="rounded-xl"><SelectValue placeholder="Type" /></SelectTrigger><SelectContent><SelectItem value="all">All types</SelectItem><SelectItem value="Image">Image</SelectItem><SelectItem value="Carousel">Carousel</SelectItem><SelectItem value="Reel">Reel</SelectItem></SelectContent></Select><Select value={market} onValueChange={setMarket}><SelectTrigger className="rounded-xl"><SelectValue placeholder="Market" /></SelectTrigger><SelectContent><SelectItem value="all">All markets</SelectItem><SelectItem value="NL">Netherlands</SelectItem><SelectItem value="DE">Germany</SelectItem><SelectItem value="FR">France</SelectItem><SelectItem value="US">USA</SelectItem></SelectContent></Select></div>
+      <div className="grid gap-3 border-b border-[#eeeaf0] p-4 md:grid-cols-2 xl:grid-cols-[160px_minmax(200px,1fr)_repeat(3,150px)]">
+        {/* Markets filter in 1st position */}
+        <Select value={market} onValueChange={setMarket}>
+          <SelectTrigger className="h-10 rounded-xl bg-[#faf9fb] font-medium">
+            <SelectValue placeholder="All markets" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All markets</SelectItem>
+            <SelectItem value="NL">Netherlands (NL)</SelectItem>
+            <SelectItem value="DE">Germany (DE)</SelectItem>
+            <SelectItem value="FR">France (FR)</SelectItem>
+            <SelectItem value="US">USA (US)</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#978f9a]" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search content, ID or source"
+            className="h-10 rounded-xl border-[#e5e1e7] bg-[#faf9fb] pl-10"
+          />
+        </div>
+
+        
+
+        {/* Status */}
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="h-10 rounded-xl">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="review">Needs Review</SelectItem>
+            <SelectItem value="failed">Failed</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Type */}
+        <Select value={type} onValueChange={setType}>
+          <SelectTrigger className="h-10 rounded-xl">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All types</SelectItem>
+            <SelectItem value="Image">Image</SelectItem>
+            <SelectItem value="Carousel">Carousel</SelectItem>
+            <SelectItem value="Reel">Reel</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="overflow-x-auto"><Table><TableHeader><TableRow className="bg-[#faf9fb]"><TableHead className="pl-5">ID</TableHead><TableHead>Image</TableHead><SortHead label="Source" column="source" /><SortHead label="Status" column="status" /><SortHead label="Markets" column="markets" /><SortHead label="Type" column="type" /><SortHead label="Captured" column="capturedAt" /></TableRow></TableHeader><TableBody>{filtered.map((item) => { const rawStatus = item.status.toLowerCase().replace(/[\s-]+/g, "_"); const shownStatus = rawStatus === "tag_new" ? "new" : rawStatus === "ready_for_approval_tagged" ? "ready_for_approval" : item.status; const thumbnail = item.images?.[0] || item.image; return <TableRow key={item.id} className="cursor-pointer" onClick={() => onOpen(item)}><TableCell className="pl-5 text-xs font-medium text-[#958e98]">{item.id}</TableCell><TableCell>{thumbnail ? item.mediaType?.toLowerCase() === "video" || item.mediaType?.toLowerCase() === "reel" ? <video src={thumbnail} muted playsInline preload="metadata" className="size-12 rounded-lg bg-black object-cover" /> : <img src={thumbnail} alt="" className="size-12 rounded-lg object-cover" /> : <span className="block size-12 rounded-lg bg-[#f3eff3]" />}</TableCell><TableCell className="text-[#6f6873]">{item.source}</TableCell><TableCell><Badge className={`${statusClass(item.status)} border-0 font-medium`}>{shownStatus}</Badge></TableCell><TableCell><div className="flex -space-x-1">{["NL","DE","FR","US"].map((code) => <span key={code} className={`grid size-7 place-items-center rounded-full border-2 border-white text-[9px] font-bold ${item.markets.includes(code) ? "bg-[#dcefe4] text-[#286342]" : "bg-[#f1eef2] text-[#a099a2]"}`}>{code}</span>)}</div></TableCell><TableCell className="text-[#77707a]">{item.type}</TableCell><TableCell className="min-w-[170px] text-[#77707a]">{item.capturedLabel}</TableCell></TableRow>; })}</TableBody></Table></div>
       {filtered.length === 0 ? <div className="p-12 text-center"><Search className="mx-auto size-6 text-[#9b949e]" /><p className="mt-3 font-medium">No content found</p><p className="mt-1 text-sm text-[#8c8490]">Change or clear one of the filters.</p></div> : null}
     </article>
@@ -285,11 +458,37 @@ export function PublishedView({
   items: any[];
   onOpen: (item: any) => void;
 }) {
+  const [marketFilter, setMarketFilter] = useState<string>("ALL");
+
+  const filteredItems = items.filter((item) => {
+    if (marketFilter === "ALL") return true;
+    const market = String(item.market || item.markets?.[0] || "").toUpperCase();
+    return market === marketFilter;
+  });
+
   return (
     <>
-      <PageTitle title="Published content" description="Published posts by market." />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <PageTitle title="Published content" description="Published posts by market." />
+      </div>
 
-      <article className="mt-7 overflow-hidden rounded-2xl border border-[#e8e4ea] bg-white shadow-[0_3px_16px_rgba(39,24,48,.035)]">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium text-[#716a75]">Filter by Market:</label>
+          <select
+            value={marketFilter}
+            onChange={(e) => setMarketFilter(e.target.value)}
+            className="rounded-lg border border-[#e8e4ea] bg-white px-3 py-1.5 text-xs font-medium text-[#17121c] focus:outline-none focus:ring-1 focus:ring-[#703650]"
+          >
+            <option value="ALL">All Markets</option>
+            <option value="DE">Germany (DE)</option>
+            <option value="FR">France (FR)</option>
+            <option value="US">USA (US)</option>
+          </select>
+        </div>
+      </div>
+
+      <article className="mt-7 overflow-hidden rounded-2xl border border-[#e8e4ea] bg-white shadow-[0_12px_28px_rgba(23,18,28,0.04)]">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -305,18 +504,26 @@ export function PublishedView({
             </TableHeader>
 
             <TableBody>
-              {items.map((item) => (
+              {filteredItems.map((item) => (
+
                 <TableRow key={item.id} className="cursor-pointer hover:bg-[#faf9fb]" onClick={() => onOpen(item)}>
                   <TableCell className="pl-5 text-xs font-medium text-[#703650]">{item.contentId}</TableCell>
                   <TableCell>{(item.images?.[0] || item.image) ? item.mediaType?.toLowerCase() === "video" || item.mediaType?.toLowerCase() === "reel" ? <video src={item.images?.[0] || item.image} muted playsInline preload="metadata" className="size-12 rounded-lg bg-black object-cover" /> : <img src={item.images?.[0] || item.image} alt="" className="size-12 rounded-lg object-cover" /> : <span className="block size-12 rounded-lg bg-[#f3eff3]" />}</TableCell>
 
                   <TableCell className="text-[#6f6873]">{item.source || "—"}</TableCell>
 
-                  <TableCell>
-                    <Badge className="border-0 bg-[#e8f7ee] text-[#257048]">
+                                    <TableCell>
+                    <Badge
+                      className={`border-0 font-medium ${
+                        item.status?.toLowerCase() === "selected"
+                          ? "bg-[#f3e8ff] text-[#6b21a8]"
+                          : "bg-[#e8f7ee] text-[#257048]"
+                      }`}
+                    >
                       {item.status}
                     </Badge>
                   </TableCell>
+
 
                   <TableCell>
                     <Badge variant="outline">{item.market}</Badge>
@@ -355,10 +562,37 @@ export function UgcView({
   items?: ReviewItem[];
   onOpen: (item: ReviewItem) => void;
 }) {
+  const [selectedMarket, setSelectedMarket] = useState<string>("ALL");
+
+  const filteredItems = items.filter((item) => {
+    if (selectedMarket === "ALL") return true;
+    const market = (item.market || item.markets?.[0] || "").toUpperCase();
+    return market === selectedMarket;
+  });
+
   return <>
-    <PageTitle title="UGC library" description="Tagged and mentioned customer content. Every item remains manual and requires permission before reuse." action={<Badge className="h-8 border-0 bg-[#fff2d5] px-3 text-[#79530b]"><LockKeyhole className="mr-1.5 size-3.5" />Always manual</Badge>} />
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <PageTitle title="UGC library" description="Tagged and mentioned customer content. Every item reflects authentic customer usage." />
+    </div>
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium text-[#716a75]">Filter by Market:</label>
+        <select
+          value={selectedMarket}
+          onChange={(e) => setSelectedMarket(e.target.value)}
+          className="rounded-lg border border-[#e8e4ea] bg-white px-3 py-1.5 text-xs font-medium text-[#17121c] focus:outline-none focus:ring-1 focus:ring-[#703650]"
+        >
+          <option value="ALL">All Markets</option>
+          <option value="DE">Germany (DE)</option>
+          <option value="FR">France (FR)</option>
+          <option value="US">USA (US)</option>
+        </select>
+      </div>
+    </div>
     <div className="mt-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-      {items.length === 0 ? <p className="text-sm text-[#827a84]">No UGC items have been collected yet.</p> : items.map((item) => {
+      {filteredItems.length === 0 ? <p className="text-sm text-[#827a84]">No UGC items match the selected market filter.</p> : null}
+      {filteredItems.map((item) => {
+
         const marketCode = (item.market || item.markets?.[0] || "").toUpperCase();
         const marketName = marketNames[marketCode] || marketCode || "Unknown";
         const isVideo = item.mediaType?.toLowerCase() === "video" || item.mediaType?.toLowerCase() === "reel";
@@ -368,13 +602,23 @@ export function UgcView({
             <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.title.split("by ")[1] || "MamaJewels creator"}</p><p className="text-[11px] text-[#918a94]">{item.source}</p></div>
             <MoreHorizontal className="size-4" />
           </div>
-          {item.mediaType?.toLowerCase() === "carousel"
-            ? <CarouselMediaViewer images={item.images?.length ? item.images : item.image ? [item.image] : []} title={item.title} className="w-full shrink-0" />
-            : item.image ? isVideo
-              ? <video src={item.image} controls playsInline preload="metadata" className="aspect-square w-full shrink-0 bg-black object-contain" aria-label={item.title} />
-              : <img src={item.image} alt={item.title} className="aspect-square w-full shrink-0 object-cover" />
-              : <div className="grid aspect-square w-full shrink-0 place-items-center bg-[#f3eff3] text-sm text-[#827a84]">Media unavailable</div>}
-          <div className="flex flex-col p-3">
+                {isVideo ? (
+            <video
+              src={item.image}
+              controls
+              playsInline
+              preload="metadata"
+              className="aspect-square w-full shrink-0 bg-black object-contain"
+              aria-label={item.title}
+            />
+          ) : (
+            <CarouselMediaViewer
+              images={item.images?.length ? item.images : item.image ? [item.image] : []}
+              title={item.title}
+              className="w-full shrink-0"
+            />
+          )}
+    <div className="flex flex-col p-3">
             <div className="flex items-center gap-4"><Heart className="size-5" /><MessageCircle className="size-5" /><Send className="size-5" /></div>
             <p className="mt-3 h-10 overflow-hidden text-sm leading-5 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]"><span className="font-semibold">creator</span> {item.caption}</p>
             <p className="mt-2 text-xs font-medium text-[#716a75]">Market: {marketName}</p>
@@ -779,10 +1023,66 @@ const integrationCards = [
 ];
 
 export function SettingsView() {
+  const [pinterestConfig, setPinterestConfig] = useState({
+    id: undefined as number | undefined,
+    appId: "",
+    appSecret: "",
+    accessToken: "",
+    boardId: "",
+    status: "active",
+    expiry: null as string | null,
+  });
+  const [tiktokConfig, setTiktokConfig] = useState({
+    id: undefined as number | undefined,
+    clientKey: "",
+    clientSecret: "",
+    accessToken: "",
+    status: "active",
+    expiry: null as string | null,
+  });
+  const saveProvider = async (provider: "pinterest" | "tiktok", config: any) => {
+    try {
+      const payload = provider === "pinterest"
+        ? {
+            id: config.id,
+            provider: "pinterest",
+            configuration: {
+              app_id: config.appId,
+              ...(config.appSecret ? { app_secret: config.appSecret } : {}),
+              ...(config.accessToken ? { access_token: config.accessToken } : {}),
+              board_id: config.boardId,
+            },
+          }
+        : {
+            id: config.id,
+            provider: "tiktok",
+            configuration: {
+              client_key: config.clientKey,
+              ...(config.clientSecret ? { client_secret: config.clientSecret } : {}),
+              ...(config.accessToken ? { access_token: config.accessToken } : {}),
+            },
+          };
+      const res = await fetch("/api/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        toast.success(`${provider.toUpperCase()} credentials saved`);
+      } else {
+        toast.error(`Failed to save ${provider} credentials`);
+      }
+    } catch (err) {
+      toast.error("Error saving credentials");
+    }
+  };
+
   const [apifyToken, setApifyToken] = useState("");
+
   const [editingApifyToken, setEditingApifyToken] = useState(false);
   const [apifyConfigured, setApifyConfigured] = useState(false);
   const [savingApify, setSavingApify] = useState(false);
+
   const [apifyHealth, setApifyHealth] = useState<{
     healthy: boolean;
     monthlyUsageUsd: number | null;
@@ -1548,9 +1848,136 @@ const [n8nHealth, setN8nHealth] = useState<{
   };
   return <>
     <style>{`.integration-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(250px,1fr);max-width:64rem}.integration-meta-grid>div{height:100%;display:flex;flex-direction:column}.integration-meta-grid>div>div:last-child{flex:1}.integration-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(250px,1fr);max-width:64rem}.integration-card-grid>div{height:100%;min-height:250px!important;display:flex;flex-direction:column;border-radius:.5rem!important}.integration-card-grid>div>div{height:100%;padding:.75rem!important}.integration-card-grid input{height:2rem;border-radius:.375rem}.integration-card-grid button{min-height:2rem;border-radius:.375rem}.integration-card-grid [class*=rounded-xl]{border-radius:.5rem}.integration-card-grid [class*=p-3]{padding:.5rem}.integration-card-grid [class*=p-4]{padding:.75rem}.integration-card-grid [class*=size-12]{width:2.25rem;height:2.25rem;border-radius:.5rem}.integration-meta-grid>div>div:last-child{padding:.75rem!important}.integration-meta-grid [class*=size-11]{width:2.25rem;height:2.25rem}.integration-meta-grid input{height:1.875rem}.integration-meta-grid label{gap:.25rem}.integration-meta-grid button{min-height:1.875rem;height:1.875rem}.integration-meta-grid .text-sm{line-height:1.25rem}@media(max-width:767px){.integration-meta-grid,.integration-card-grid{grid-template-columns:1fr}}`}</style>
-    <PageTitle title="Integrations" description="Meta accounts and service API keys." />
-    <Tabs defaultValue="meta" className="mt-7"><TabsList variant="line" className="w-full justify-start border-b border-[#e5e1e7] pb-0"><TabsTrigger value="meta" className="px-4 pb-3">Meta</TabsTrigger><TabsTrigger value="api-keys" className="px-4 pb-3">API Keys</TabsTrigger></TabsList>
-      <TabsContent value="meta" className="pt-5">
+    <Tabs defaultValue="platforms" className="mt-7">
+      <TabsList variant="line" className="w-full justify-start border-b border-[#e5e1e7] pb-0">
+        <TabsTrigger value="platforms" className="px-4 pb-3">Social Platforms</TabsTrigger>
+        <TabsTrigger value="api-keys" className="px-4 pb-3">API Keys</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="platforms" className="pt-5">
+        <div className="mb-4">
+          <p className="text-sm text-[#827a84]">
+            Manage Pinterest and TikTok credentials and verify token health.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Pinterest Card */}
+          <Card className="flex flex-col rounded-xl border border-[#e8e4ea] bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-[#271830]">Pinterest</h3>
+                <p className="text-xs text-[#827a84]">Direct publishing & board posting</p>
+              </div>
+              <Badge className="border-0 bg-emerald-100 text-emerald-800 text-xs">
+                Active
+              </Badge>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <Label className="text-xs font-medium text-[#554d58]">App ID</Label>
+                <Input
+                  value={pinterestConfig.appId}
+                  onChange={(e) => setPinterestConfig({ ...pinterestConfig, appId: e.target.value })}
+                  placeholder="Enter Pinterest App ID"
+                  className="mt-1 h-8 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-[#554d58]">App Secret</Label>
+                <Input
+                  type="password"
+                  value={pinterestConfig.appSecret}
+                  onChange={(e) => setPinterestConfig({ ...pinterestConfig, appSecret: e.target.value })}
+                  placeholder="Enter App Secret"
+                  className="mt-1 h-8 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-[#554d58]">Access Token</Label>
+                <Input
+                  type="password"
+                  value={pinterestConfig.accessToken}
+                  onChange={(e) => setPinterestConfig({ ...pinterestConfig, accessToken: e.target.value })}
+                  placeholder="Enter Access Token"
+                  className="mt-1 h-8 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-[#554d58]">Default Board ID</Label>
+                <Input
+                  value={pinterestConfig.boardId}
+                  onChange={(e) => setPinterestConfig({ ...pinterestConfig, boardId: e.target.value })}
+                  placeholder="Enter Board ID"
+                  className="mt-1 h-8 text-xs"
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={() => void saveProvider("pinterest", pinterestConfig)}
+                className="mt-2 w-full bg-[#e60023] text-white hover:bg-[#ad081b]"
+              >
+                Save Pinterest Credentials
+              </Button>
+            </div>
+          </Card>
+
+          {/* TikTok Card */}
+          <Card className="flex flex-col rounded-xl border border-[#e8e4ea] bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-[#271830]">TikTok</h3>
+                <p className="text-xs text-[#827a84]">Direct video publishing</p>
+              </div>
+              <Badge className="border-0 bg-emerald-100 text-emerald-800 text-xs">
+                Active
+              </Badge>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <Label className="text-xs font-medium text-[#554d58]">Client Key</Label>
+                <Input
+                  value={tiktokConfig.clientKey}
+                  onChange={(e) => setTiktokConfig({ ...tiktokConfig, clientKey: e.target.value })}
+                  placeholder="Enter TikTok Client Key"
+                  className="mt-1 h-8 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-[#554d58]">Client Secret</Label>
+                <Input
+                  type="password"
+                  value={tiktokConfig.clientSecret}
+                  onChange={(e) => setTiktokConfig({ ...tiktokConfig, clientSecret: e.target.value })}
+                  placeholder="Enter Client Secret"
+                  className="mt-1 h-8 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-[#554d58]">Access Token</Label>
+                <Input
+                  type="password"
+                  value={tiktokConfig.accessToken}
+                  onChange={(e) => setTiktokConfig({ ...tiktokConfig, accessToken: e.target.value })}
+                  placeholder="Enter Access Token"
+                  className="mt-1 h-8 text-xs"
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={() => void saveProvider("tiktok", tiktokConfig)}
+                className="mt-2 w-full bg-black text-white hover:bg-neutral-800"
+              >
+                Save TikTok Credentials
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </TabsContent>
+
+     <TabsContent value="meta" className="pt-5">
         <div className="mb-4 flex items-center justify-between"><p className="text-sm text-[#827a84]">{metaAccounts.length} connected account{metaAccounts.length === 1 ? "" : "s"}</p><Button variant="outline" size="sm" onClick={() => void refreshMeta()} disabled={refreshingMeta}>{refreshingMeta ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}Refresh Meta</Button></div>
         <div className="integration-meta-grid grid items-stretch gap-4">
           {metaAccounts.map((account) => {

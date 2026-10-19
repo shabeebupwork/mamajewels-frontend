@@ -2,7 +2,7 @@
 
 import {
   AlertTriangle, Bookmark, CheckCircle2, ChevronDown, Eye, EyeOff,
-  FolderHeart, Gauge, HardDrive, Heart, Images, KeyRound, LogOut,
+  FolderHeart, Gauge, HardDrive, Heart, Images, KeyRound, LogOut, Copy,
   MessageCircle, Send, Settings, ShieldAlert, ShieldCheck, Sparkles,
   Users,
 } from "lucide-react";
@@ -31,20 +31,27 @@ import {
 const workspaceNavigation: { key: PageKey; label: string; icon: React.ComponentType<{ className?: string }>; count?: number }[] = [
   { key: "overview", label: "Overview", icon: Gauge },
   { key: "content", label: "Content", icon: Images },
-  { key: "published", label: "Published", icon: CheckCircle2 },
+  { key: "ugc_content", label: "UGC content", icon: Sparkles },
   { key: "ugc", label: "UGC library", icon: FolderHeart },
-  { key: "failures", label: "Failures", icon: AlertTriangle },
+  { key: "published", label: "Published", icon: CheckCircle2 },
 ];
+
 
 const manageNavigation: { key: PageKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "team", label: "Team & access", icon: Users },
   { key: "settings", label: "Integrations", icon: Settings },
 ];
 
-const pageLabels: Record<PageKey, string> = {
-  overview: "Overview", content: "Content", published: "Published", ugc: "UGC library",
-  failures: "Failures", team: "Team & access", settings: "Integrations",
+const pageLabels: Partial<Record<PageKey, string>> = {
+  overview: "Overview",
+  content: "Content",
+  ugc_content: "UGC content",
+  published: "Published",
+  ugc: "UGC library",
+  team: "Team & access",
+  settings: "Integrations",
 };
+
 
 type DashboardUser = { id: number | string; name: string; email: string; role: string };
 
@@ -107,7 +114,7 @@ function LoginScreen({ onSignIn }: { onSignIn: (user: DashboardUser) => void }) 
   </main>;
 }
 
-function AppSidebar({ activePage, setActivePage, counts }: { activePage: PageKey; setActivePage: (page: PageKey) => void; humanApproval?: boolean; counts: { content: number; ugc: number; failures: number } }) {
+function AppSidebar({ activePage, setActivePage }: { activePage: PageKey; setActivePage: (page: PageKey) => void; humanApproval?: boolean; counts?: { content?: number; ugc_content?: number; ugc?: number } }) {
   const [role, setRole] = useState("Viewer");
   useEffect(() => {
     fetch("/api/auth/me", { cache: "no-store" })
@@ -141,7 +148,8 @@ function AppSidebar({ activePage, setActivePage, counts }: { activePage: PageKey
           <SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-[.13em] text-white/35">Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {workspaceNavigation.filter((item) => (isAdmin || (readablePages?.includes(item.key) ?? false)) && (item.key !== "failures" || isAdmin)).map((item) => renderItem({ ...item, count: item.key === "content" ? counts.content : item.key === "ugc" ? counts.ugc : item.key === "failures" ? counts.failures : undefined }))}
+{workspaceNavigation.filter((item) => isAdmin || (readablePages?.includes(item.key) ?? false)).map(renderItem)}
+
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -170,7 +178,7 @@ function Header({ activePage, onSignOut: onSignedOut }: { activePage: PageKey; s
       .catch(() => {});
   }, []);
   const initials = (user?.name || "User").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-  return <header className="sticky top-0 z-30 flex h-20 items-center gap-3 border-b border-[#e8e5eb] bg-white/90 px-4 backdrop-blur-xl sm:px-7"><SidebarTrigger className="size-10 rounded-xl border border-[#e5e1e7]" /><div className="hidden min-w-0 items-center gap-2 text-sm text-[#8c8490] sm:flex"><span>Workspace</span><span>/</span><span className="truncate font-medium text-[#3f3942]">{pageLabels[activePage]}</span></div><div className="ml-auto" /><DropdownMenu><DropdownMenuTrigger asChild><button className="flex items-center gap-2 rounded-xl p-1.5 pr-2 hover:bg-[#f5f2f6]"><span className="grid size-9 place-items-center rounded-xl bg-[#f4d1df] text-sm font-semibold text-[#6d2448]">{initials}</span><span className="hidden text-left xl:block"><span className="block text-sm font-medium">{user?.name || "Dashboard user"}</span><span className="block text-xs text-[#8e8793]">{user?.role || "Signed in"}</span></span><ChevronDown className="hidden size-4 text-[#8e8793] sm:block" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-xl"><DropdownMenuItem variant="destructive" onClick={onSignOut}><LogOut />Sign out</DropdownMenuItem></DropdownMenuContent></DropdownMenu></header>;
+  return <header className="sticky top-0 z-30 flex h-16 sm:h-20 items-center gap-2 sm:gap-3 border-b border-[#e8e5eb] bg-white/95 px-3 sm:px-7 backdrop-blur-xl"><SidebarTrigger className="size-9 sm:size-10 rounded-xl border border-[#e5e1e7]" /><div className="flex min-w-0 items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-[#8c8490]"><span className="hidden sm:inline">Workspace</span><span className="hidden sm:inline">/</span><span className="truncate font-medium text-[#3f3942]">{pageLabels[activePage]}</span></div><div className="ml-auto" /><DropdownMenu><DropdownMenuTrigger asChild><button className="flex items-center gap-1.5 sm:gap-2 rounded-xl p-1 sm:p-1.5 sm:pr-2 hover:bg-[#f5f2f6]"><span className="grid size-8 sm:size-9 place-items-center rounded-xl bg-[#f4d1df] text-xs sm:text-sm font-semibold text-[#6d2448]">{initials}</span><span className="hidden text-left xl:block"><span className="block text-sm font-medium">{user?.name || "Dashboard user"}</span><span className="block text-xs text-[#8e8793]">{user?.role || "Signed in"}</span></span><ChevronDown className="hidden size-4 text-[#8e8793] sm:block" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-xl"><DropdownMenuItem variant="destructive" onClick={onSignOut}><LogOut />Sign out</DropdownMenuItem></DropdownMenuContent></DropdownMenu></header>;
 }
 
 const marketInfo = {
@@ -180,10 +188,62 @@ const marketInfo = {
 };
 
 function InstagramPost({ item, account, caption, editable = true }: { item: ReviewItem; account: string; caption: string; editable?: boolean }) {
-  const isCarousel = item.mediaType?.toLowerCase() === "carousel";
-  const images = item.images?.length ? item.images : item.image ? [item.image] : [];
-  return <div className="mx-auto max-w-[470px] overflow-hidden rounded-xl border border-[#dedade] bg-white shadow-sm"><div className="flex items-center gap-3 p-3"><span className="grid size-9 place-items-center rounded-full bg-[#f2dce6] text-[10px] font-bold text-[#713751]">MJ</span><div className="flex-1"><p className="text-sm font-semibold">{account}</p><p className="text-[11px] text-[#918a94]">MamaJewels</p></div><span className="text-lg">•••</span></div>{isCarousel ? <CarouselMediaViewer images={images} title={item.title} /> : item.image ? item.mediaType?.toLowerCase() === "video" || item.mediaType?.toLowerCase() === "reel" ? <video src={item.image} controls playsInline preload="metadata" className="aspect-square w-full bg-black object-contain" aria-label={item.title} /> : <img src={item.image} alt={item.title} className="aspect-square w-full object-cover" /> : <div className="grid aspect-square w-full place-items-center bg-[#f3eff3] text-sm text-[#827a84]">Media unavailable</div>}<div className="p-3"><div className="flex items-center gap-4"><Heart className="size-6" /><MessageCircle className="size-6" /><Send className="size-6" /><Bookmark className="ml-auto size-6" /></div><p className="mt-3 text-sm font-semibold">1,248 likes</p>{editable ? <div className="mt-2"><Label className="mb-2 block text-xs text-[#8f8792]">Edit caption</Label><Textarea defaultValue={caption} className="min-h-24 resize-none rounded-xl border-[#e6e2e7] text-sm leading-5" /></div> : <p className="mt-2 whitespace-pre-wrap text-sm leading-5"><span className="font-semibold">{account}</span> {caption}</p>}<p className="mt-2 text-[10px] uppercase text-[#a39ca5]">{item.capturedLabel}</p></div></div>;
+  const isVideo = item.mediaType?.toLowerCase() === "video" || item.mediaType?.toLowerCase() === "reel";
+  const mediaList = item.images?.length ? item.images : item.image ? [item.image] : [];
+
+  return (
+    <div className="mx-auto max-w-[470px] overflow-hidden rounded-xl border border-[#dedade] bg-white shadow-sm">
+      <div className="flex items-center gap-3 p-3">
+        <span className="grid size-9 place-items-center rounded-full bg-[#f2dce6] text-[10px] font-bold text-[#713751]">
+          MJ
+        </span>
+        <div className="flex-1">
+          <p className="text-sm font-semibold">{account}</p>
+          <p className="text-[11px] text-[#918a94]">MamaJewels</p>
+        </div>
+        <span className="text-lg">•••</span>
+      </div>
+
+      {isVideo ? (
+        <video
+          src={item.image}
+          controls
+          playsInline
+          preload="metadata"
+          className="aspect-square w-full bg-black object-contain"
+          aria-label={item.title}
+        />
+      ) : (
+        <CarouselMediaViewer images={mediaList} title={item.title} />
+      )}
+
+      <div className="p-3">
+        <div className="flex items-center gap-4">
+          <Heart className="size-6" />
+          <MessageCircle className="size-6" />
+          <Send className="size-6" />
+          <Bookmark className="ml-auto size-6" />
+        </div>
+        <p className="mt-3 text-sm font-semibold">1,248 likes</p>
+        {editable ? (
+          <div className="mt-2">
+            <Label className="mb-2 block text-xs text-[#8f8792]">Edit caption</Label>
+            <Textarea
+              defaultValue={caption}
+              className="min-h-24 resize-none rounded-xl border-[#e6e2e7] text-sm leading-5"
+            />
+          </div>
+        ) : (
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-5">
+            <span className="font-semibold">{account}</span> {caption}
+          </p>
+        )}
+        <p className="mt-2 text-[10px] uppercase text-[#a39ca5]">{item.capturedLabel}</p>
+      </div>
+    </div>
+  );
 }
+
 
 function DriveArchiveLinks({ item }: { item: ReviewItem }) {
   const fileIds = item.driveFileIds?.length ? item.driveFileIds : item.driveFileId ? [item.driveFileId] : [];
@@ -208,14 +268,25 @@ function ContentReviewSheet({
     Record<string, string>
   >({});
   const [ugcCaption, setUgcCaption] = useState("");
-  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
+  const [pinterestMarkets, setPinterestMarkets] = useState<string[]>([]);
+  const [tiktokMarkets, setTiktokMarkets] = useState<string[]>([]);
   const [republishMarkets, setRepublishMarkets] = useState<string[]>([]);
   const [republishWarningOpen, setRepublishWarningOpen] = useState(false);
   const [approving, setApproving] = useState(false);
+
   useEffect(() => {
     setUgcCaption(item?.caption || "");
-    setSelectedMarkets(item?.localizations?.map((entry) => entry.market.toUpperCase()).filter((market) => ["DE", "FR", "US"].includes(market)) || []);
+    setEditedCaptions({});
+    const available = item?.localizations
+      ?.map((entry) => entry.market.toUpperCase())
+      .filter((m) => ["DE", "FR", "US"].includes(m)) || [];
+    // If no localizations exist yet (like in raw UGC content), default all 3 markets on
+    const initialMarkets = available.length > 0 ? available : ["DE", "FR", "US"];
+    setPinterestMarkets(initialMarkets);
+    setTiktokMarkets(initialMarkets);
   }, [item?.id, item?.caption]);
+
+
   if (!item) return null;
 
   const isUgc = item.kind === "ugc";
@@ -242,22 +313,55 @@ function ContentReviewSheet({
       setApproving(false);
     }
   };
-  const requestApproval = (markets: string[]) => {
-    const available = markets.filter((market) => localizations.some((entry) => entry.market.toUpperCase() === market));
-    if (available.length === 0) {
-      toast.error("No localized variants are available for the selected markets");
+  const handlePublishPlatform = async (platform: "pinterest" | "tiktok", markets: string[]) => {
+    if (markets.length === 0) {
+      toast.error(`Select at least one market for ${platform === "pinterest" ? "Pinterest" : "TikTok"}`);
       return;
     }
-    const alreadyPublished = available.filter((market) =>
-      localizations.some((entry) => entry.market.toUpperCase() === market && entry.status.toLowerCase() === "published")
-    );
-    if (alreadyPublished.length > 0) {
-      setRepublishMarkets(available);
-      setRepublishWarningOpen(true);
-      return;
+    setApproving(true);
+    try {
+      const response = await fetch("/api/content/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentId: item.id, markets, platform, action: "publish" }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || `Failed to publish to ${platform}`);
+      toast.success(`Published to ${platform === "pinterest" ? "Pinterest" : "TikTok"} for ${markets.join(", ")}`);
+      onClose();
+      onApproved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : `Failed to publish to ${platform}`);
+    } finally {
+      setApproving(false);
     }
-    void publishApprovals(available);
   };
+
+  const handleMarkSelected = async () => {
+    const combinedMarkets = [...new Set([...pinterestMarkets, ...tiktokMarkets])];
+    if (combinedMarkets.length === 0) {
+      toast.error("Please select at least one market");
+      return;
+    }
+    setApproving(true);
+    try {
+      const response = await fetch("/api/content/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentId: item.id, markets: combinedMarkets, status: "selected" }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Failed to mark as selected");
+      toast.success(`Marked as Selected (${combinedMarkets.join(", ")})`);
+      onClose();
+      onApproved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to mark as selected");
+    } finally {
+      setApproving(false);
+    }
+  };
+
 
   return (
     <>
@@ -268,7 +372,7 @@ function ContentReviewSheet({
         if (!open) onClose();
       }}
     >
-      <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-[760px]">
+      <SheetContent className="w-full max-w-full sm:max-w-[760px] overflow-y-auto p-0">
         <SheetHeader className="border-b border-[#e8e4ea] p-5 pr-14">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">{item.id}</Badge>
@@ -355,6 +459,7 @@ function ContentReviewSheet({
                 const caption =
                   editedCaptions[key] ??
                   localization?.caption ??
+                  item.caption ??
                   "";
 
                 return (
@@ -371,9 +476,27 @@ function ContentReviewSheet({
                     />
 
                     <div className="space-y-2">
-                      <Label>Caption</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Caption</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-[#716a75] hover:text-[#17121c]"
+                          onClick={() => {
+                            if (caption) {
+                              navigator.clipboard.writeText(caption);
+                              toast.success("Caption copied to clipboard");
+                            }
+                          }}
+                        >
+                          <Copy className="mr-1 size-3.5" />
+                          Copy
+                        </Button>
+                      </div>
 
                       <Textarea
+
                         value={caption}
                         disabled={!canEdit}
                         onChange={(event) =>
@@ -497,95 +620,162 @@ function ContentReviewSheet({
               </Button>
             </div>
           ) : (
-            <div className="grid w-full gap-3">
-              <div className="grid grid-cols-3 gap-2">{approvalMarkets.map((market) => {
-                const localization = localizations.find((entry) => entry.market.toUpperCase() === market);
-                const checked = selectedMarkets.includes(market);
-                return <label key={market} className={`flex min-w-0 items-center gap-2 rounded-lg border p-2.5 text-sm ${localization ? "cursor-pointer border-[#e5e1e7]" : "cursor-not-allowed border-[#eeeaf0] text-[#aaa3ac]"}`}>
-                  <input type="checkbox" checked={checked} disabled={!localization || !canEdit} onChange={(event) => setSelectedMarkets((current) => event.target.checked ? [...new Set([...current, market])] : current.filter((entry) => entry !== market))} className="size-4 accent-[#632b4a]" />
-                  <span className="font-medium">{market}</span>
-                  <span className="ml-auto truncate text-[11px] text-[#8d8590]">{localization ? localization.status || "Ready" : "—"}</span>
-                </label>;
-              })}</div>
-              <div className="flex w-full gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                disabled={!canEdit}
-                onClick={async () => {
-                  try {
-                    const markets = ["de", "fr", "us"] as const;
-
-                    for (const key of markets) {
-                      const localization =
-                        item.localizations?.find(
-                          (entry) =>
-                            entry.market.toLowerCase() === key
-                        );
-
-                      const caption =
-                        editedCaptions[key] ??
-                        localization?.caption ??
-                        "";
-
-                      if (
-                        !localization ||
-                        !caption.trim()
-                      ) {
-                        continue;
-                      }
-
-                      const response = await fetch(
-                        "/api/content/localization",
-                        {
-                          method: "POST",
-                          headers: {
-                            "Content-Type":
-                              "application/json",
-                          },
-                          body: JSON.stringify({
-                            contentId: item.id,
-                            market: key.toUpperCase(),
-                            caption,
-                          }),
-                        }
+            <div className="grid w-full gap-4">
+              {/* Separate Market Selections */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {/* Pinterest Markets */}
+                <div className="rounded-xl border border-[#fee2e2] bg-[#fff5f5] p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-[#E60023]">
+                      <svg className="size-3.5 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345-.09.375-.293 1.199-.334 1.368-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.627-5.373-12-12-12z" />
+                      </svg>
+                      Pinterest Markets
+                    </span>
+                    <span className="text-[11px] font-medium text-[#b91c1c]">{pinterestMarkets.length} selected</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {approvalMarkets.map((market) => {
+                      const checked = pinterestMarkets.includes(market);
+                      return (
+                        <label
+                          key={`pin-${market}`}
+                          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                            checked
+                              ? "border-[#E60023] bg-white text-[#E60023] shadow-sm"
+                              : "border-[#fca5a5]/40 bg-white/70 text-[#716a75]"
+                          } ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={!canEdit}
+                            onChange={(e) =>
+                              setPinterestMarkets((prev) =>
+                                e.target.checked ? [...new Set([...prev, market])] : prev.filter((m) => m !== market)
+                              )
+                            }
+                            className="size-3.5 accent-[#E60023]"
+                          />
+                          {market}
+                        </label>
                       );
+                    })}
+                  </div>
+                </div>
 
-                      if (!response.ok) {
-                        throw new Error(
-                          `Failed to save ${key.toUpperCase()} caption`
-                        );
+                {/* TikTok Markets */}
+                <div className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-[#111827]">
+                      <svg className="size-3.5 fill-current" viewBox="0 0 24 24">
+                        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.33 6.33 0 0 0-1-.08A6.34 6.34 0 0 0 3 15.66a6.34 6.34 0 0 0 10.82 4.49 6.3 6.3 0 0 0 1.86-4.48V8.75a8.28 8.28 0 0 0 4.91 1.6V6.9a4.86 4.86 0 0 1-1-.21z" />
+                      </svg>
+                      TikTok Markets
+                    </span>
+                    <span className="text-[11px] font-medium text-[#4b5563]">{tiktokMarkets.length} selected</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {approvalMarkets.map((market) => {
+                      const checked = tiktokMarkets.includes(market);
+                      return (
+                        <label
+                          key={`tt-${market}`}
+                          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                            checked
+                              ? "border-black bg-white text-black shadow-sm"
+                              : "border-black/20 bg-white/70 text-[#716a75]"
+                          } ${canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={!canEdit}
+                            onChange={(e) =>
+                              setTiktokMarkets((prev) =>
+                                e.target.checked ? [...new Set([...prev, market])] : prev.filter((m) => m !== market)
+                              )
+                            }
+                            className="size-3.5 accent-[#111827]"
+                          />
+                          {market}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons with Branded Designs */}
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {/* Save edits */}
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-[#e5e1e7] text-xs font-medium sm:w-auto"
+                  disabled={!canEdit}
+                  onClick={async () => {
+                    try {
+                      const markets = ["de", "fr", "us"] as const;
+                      for (const key of markets) {
+                        const localization = item.localizations?.find((e) => e.market.toLowerCase() === key);
+                        const caption = editedCaptions[key] ?? localization?.caption ?? "";
+                        if (!localization || !caption.trim()) continue;
+                        const res = await fetch("/api/content/localization", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ contentId: item.id, market: key.toUpperCase(), caption }),
+                        });
+                        if (!res.ok) throw new Error(`Failed to save ${key.toUpperCase()} caption`);
                       }
+                      toast.success("Caption changes saved");
+                    } catch (error) {
+                      toast.error("Failed to save captions");
                     }
+                  }}
+                >
+                  Save edits
+                </Button>
 
-                    toast.success(
-                      "Caption changes saved"
-                    );
-                  } catch (error) {
-                    console.error(
-                      "Save caption error:",
-                      error
-                    );
+                {/* Mark as Selected */}
+                <Button
+                  variant="outline"
+                  disabled={!canEdit || approving || (pinterestMarkets.length === 0 && tiktokMarkets.length === 0)}
+                  onClick={handleMarkSelected}
+                  className="rounded-xl border-[#d9cfe0] bg-[#fdfbfe] text-xs font-semibold text-[#632b4a] hover:bg-[#f6eef8] sm:flex-1"
+                >
+                  <CheckCircle2 className="mr-1.5 size-3.5 text-[#632b4a]" />
+                  Mark Selected
+                </Button>
 
-                    toast.error(
-                      "Failed to save caption"
-                    );
-                  }
-                }}
-              >
-                Save edits
-              </Button>
+                {/* Pinterest Branded Publish Button */}
+                <button
+                  type="button"
+                  disabled={!canEdit || approving || pinterestMarkets.length === 0}
+                  onClick={() => handlePublishPlatform("pinterest", pinterestMarkets)}
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-[#E60023] px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#b8001b] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
+                >
+                  <svg className="size-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345-.09.375-.293 1.199-.334 1.368-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.627-5.373-12-12-12z" />
+                  </svg>
+                  Publish Pinterest ({pinterestMarkets.length})
+                </button>
 
-              <Button
-                className="flex-1"
-                disabled={!canEdit || approving || selectedMarkets.length === 0}
-                onClick={() => requestApproval(selectedMarkets)}
-              >
-                <CheckCircle2 className="size-4" />
-                Approve selected ({selectedMarkets.length})
-              </Button>
+                {/* TikTok Branded Publish Button */}
+                <button
+                  type="button"
+                  disabled={!canEdit || approving || tiktokMarkets.length === 0}
+                  onClick={() => handlePublishPlatform("tiktok", tiktokMarkets)}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[#010101] bg-[#010101] px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#1a1a1a] hover:border-[#25f4ee]/50 hover:shadow-[0_0_12px_rgba(37,244,238,0.25)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
+                >
+                  <svg className="size-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.33 6.33 0 0 0-1-.08A6.34 6.34 0 0 0 3 15.66a6.34 6.34 0 0 0 10.82 4.49 6.3 6.3 0 0 0 1.86-4.48V8.75a8.28 8.28 0 0 0 4.91 1.6V6.9a4.86 4.86 0 0 1-1-.21z" />
+                  </svg>
+                  Publish TikTok ({tiktokMarkets.length})
+                </button>
               </div>
             </div>
+
+            
           )}
         </SheetFooter> : null}
       </SheetContent>
@@ -619,6 +809,7 @@ export default function DashboardClient() {
   const [dbContentItems, setDbContentItems] = useState<ReviewItem[]>([]);
   const [publishedItems, setPublishedItems] = useState<any[]>([]);
   const [dbUgcItems, setDbUgcItems] = useState<ReviewItem[]>([]);
+  const [ugcContentItems, setUgcContentItems] = useState<ReviewItem[]>([]);
   const [failureItems, setFailureItems] = useState<any[]>([]);
   const safeFailureItems = Array.isArray(failureItems) ? failureItems : [];
 
@@ -677,6 +868,13 @@ export default function DashboardClient() {
     .then((res) => res.json())
     .then((data) => setDbUgcItems(data as ReviewItem[]))
     .catch((error) => console.error("Failed to load UGC:", error));
+  }, [signedIn]);
+  useEffect(() => {
+    if (!signedIn) return;
+    fetch("/api/ugc?status=completed")
+      .then((res) => res.json())
+      .then((data) => setUgcContentItems(Array.isArray(data) ? data : []))
+      .catch((error) => console.error("Failed to load completed UGC:", error));
   }, [signedIn]);
   useEffect(() => {
   if (!signedIn) return;
@@ -787,7 +985,35 @@ export default function DashboardClient() {
       return <div className="mt-10 rounded-lg border border-[#e5e1e7] bg-white p-6 text-sm text-[#746c77]">Your account does not have access to this section.</div>;
     }
     if (activePage === "overview") return <OverviewView onOpen={setSelectedItem} onNavigate={setActivePage} items={dbContentItems} userName={currentUser?.name || ""} />;
-    if (activePage === "content") return <ContentView items={dbContentItems} onOpen={(item) => { setReviewReadOnly(false); setSelectedItem(item); }} />;
+    if (activePage === "content") {
+      return (
+        <ContentView
+          title="NL Content"
+          description="Review, edit and track NL content across Germany, France and the USA."
+          items={dbContentItems}
+          mode="nl"
+          onOpen={(item) => {
+            setReviewReadOnly(false);
+            setSelectedItem(item);
+          }}
+        />
+      );
+    }
+    if (activePage === "ugc_content") {
+      return (
+        <ContentView
+          title="UGC Content"
+          description="Review, edit and track UGC content across Germany, France and the USA."
+          items={ugcContentItems}
+          mode="ugc"
+          onOpen={(item) => {
+            setReviewReadOnly(false);
+            setSelectedItem(item);
+          }}
+        />
+      );
+    }
+
     if (activePage === "published") return <PublishedView items={publishedItems} onOpen={(published) => {
       const content = dbContentItems.find((item) => item.id === String(published.contentId));
       const market = String(published.market || "").toUpperCase();
@@ -814,12 +1040,17 @@ export default function DashboardClient() {
       setSelectedItem(content ? { ...content, status: "Published", market } : fallback);
     }} />;
     if (activePage === "ugc") return <UgcView items={dbUgcItems} onOpen={(item) => { setReviewReadOnly(false); setSelectedItem(item); }} />;
-    if (activePage === "failures") return <FailuresView items={failureItems} onRetry={refreshFailureItems} />;
+    // if (activePage === "failures") return <FailuresView items={failureItems} onRetry={refreshFailureItems} />;
     if (activePage === "team") return <TeamView isOwner={currentUser?.role === "Owner"} />;
     return <SettingsView />;
   };
 
-  return <SidebarProvider style={{ "--sidebar-width": "16.25rem" } as React.CSSProperties}><AppSidebar activePage={activePage} setActivePage={setActivePage} humanApproval={humanApproval} counts={{ content: dbContentItems.length, ugc: dbUgcItems.length, failures: failureItems.filter((failure) => String(failure.status).toLowerCase() !== "resolved").length }} /><SidebarInset className="min-w-0 bg-[#f7f7f8]"><Header activePage={activePage} setActivePage={setActivePage} onSignOut={async () => { try { const response = await fetch("/api/auth/logout", { method: "POST" }); if (!response.ok) throw new Error(); setSignedIn(false); setCurrentUser(null); setActivePage("overview"); toast.success("Signed out"); } catch { toast.error("Unable to sign out. Please try again."); } }} />{!humanApproval ? <button onClick={() => setActivePage("settings")} className="flex w-full items-center justify-center gap-2 border-b border-[#e9b5bc] bg-[#fff1f2] px-4 py-2.5 text-center text-sm font-medium text-[#933241]"><ShieldAlert className="size-4" />Human approval is OFF. Eligible owned content can publish automatically. UGC remains manual.<span className="underline underline-offset-2">Review settings</span></button> : null}<div className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-7 sm:px-7 lg:py-9">{renderPage()}</div></SidebarInset><ContentReviewSheet
+  return <SidebarProvider style={{ "--sidebar-width": "16.25rem" } as React.CSSProperties}><AppSidebar activePage={activePage} setActivePage={setActivePage} humanApproval={humanApproval} counts={{
+  content: dbContentItems.filter((i) => i.source.toLowerCase().includes("@mamajewels.nl")).length,
+  ugc_content: dbContentItems.filter((i) => !i.source.toLowerCase().includes("@mamajewels.nl")).length,
+  ugc: dbUgcItems.length,
+}}
+ /><SidebarInset className="min-w-0 bg-[#f7f7f8]"><Header activePage={activePage} setActivePage={setActivePage} onSignOut={async () => { try { const response = await fetch("/api/auth/logout", { method: "POST" }); if (!response.ok) throw new Error(); setSignedIn(false); setCurrentUser(null); setActivePage("overview"); toast.success("Signed out"); } catch { toast.error("Unable to sign out. Please try again."); } }} />{!humanApproval ? <button onClick={() => setActivePage("settings")} className="flex w-full items-center justify-center gap-2 border-b border-[#e9b5bc] bg-[#fff1f2] px-4 py-2.5 text-center text-sm font-medium text-[#933241]"><ShieldAlert className="size-4" />Human approval is OFF. Eligible owned content can publish automatically. UGC remains manual.<span className="underline underline-offset-2">Review settings</span></button> : null}<div className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-7 sm:px-7 lg:py-9">{renderPage()}</div></SidebarInset><ContentReviewSheet
   item={selectedItem}
   readOnly={reviewReadOnly}
   canReview={currentUser?.role === "Owner" || currentUser?.role === "Administrator" || currentUser?.role === "Editor and approver"}
@@ -829,9 +1060,30 @@ export default function DashboardClient() {
     refreshUgcItems();
   }}
   onApproved={async () => {
-    const response = await fetch("/api/content");
-    const data = await response.json();
-    setDbContentItems(data as ReviewItem[]);
+    const [contentRes, publishedRes, ugcContentRes, ugcRes] = await Promise.all([
+      fetch("/api/content"),
+      fetch("/api/published"),
+      fetch("/api/ugc?status=completed"),
+      fetch("/api/ugc"),
+    ]);
+    if (contentRes.ok) {
+      const data = await contentRes.json();
+      setDbContentItems(data as ReviewItem[]);
+    }
+    if (publishedRes.ok) {
+      const data = await publishedRes.json();
+      setPublishedItems(data as any[]);
+    }
+    if (ugcContentRes.ok) {
+      const data = await ugcContentRes.json();
+      setUgcContentItems(Array.isArray(data) ? data : []);
+    }
+    if (ugcRes.ok) {
+      const data = await ugcRes.json();
+      setDbUgcItems(data as ReviewItem[]);
+    }
   }}
+
+
 /><AlertDialog open={approvalDialogOpen} onOpenChange={(open) => { setApprovalDialogOpen(open); if (!open) setApprovalStep(1); }}><AlertDialogContent className="rounded-2xl"><AlertDialogHeader><AlertDialogMedia className={approvalStep === 1 ? "bg-[#fff2d5] text-[#8a641a]" : "bg-[#fdebec] text-[#a33442]"}>{approvalStep === 1 ? <ShieldAlert /> : <AlertTriangle />}</AlertDialogMedia><AlertDialogTitle>{approvalStep === 1 ? "Turn off human approval?" : "Final confirmation"}</AlertDialogTitle><AlertDialogDescription className="leading-6">{approvalStep === 1 ? "Eligible MamaJewels-owned content will no longer wait for approval after all checks pass." : "Content may publish automatically to Germany, France and the USA. UGC and any flagged content will always remain manual."}</AlertDialogDescription></AlertDialogHeader>{approvalStep === 2 ? <div className="rounded-xl border border-[#efc4c8] bg-[#fff4f4] p-3 text-sm font-medium text-[#843440]">This changes live publishing behavior and will be recorded.</div> : null}<AlertDialogFooter><AlertDialogCancel>Keep approval on</AlertDialogCancel>{approvalStep === 1 ? <Button onClick={() => setApprovalStep(2)}>Yes, continue</Button> : <Button variant="destructive" onClick={disableApproval}>Turn Off Approval and Enable Automatic Publishing</Button>}</AlertDialogFooter></AlertDialogContent></AlertDialog><Toaster position="top-right" richColors /></SidebarProvider>;
 }
