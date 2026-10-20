@@ -83,9 +83,10 @@ const publicationData = [
 ];
 
 const statusClass = (status: string) => {
-  if (status.includes("Published") || status.includes("approved") || status === "Healthy") return "bg-[#e8f7ee] text-[#257048]";
-  if (status.includes("failure") || status.includes("declined") || status.includes("Failed")) return "bg-[#fdebec] text-[#a33442]";
-  if (status.includes("localization") || status.includes("speech") || status.includes("Manual")) return "bg-[#fff2d5] text-[#87600f]";
+  const normalized = status.toLowerCase();
+  if (normalized.includes("published") || normalized.includes("approved") || normalized === "healthy") return "bg-[#e8f7ee] text-[#257048]";
+  if (normalized.includes("failure") || normalized.includes("failed") || normalized.includes("declined")) return "bg-[#fdebec] text-[#a33442]";
+  if (normalized.includes("localization") || normalized.includes("speech") || normalized.includes("manual") || normalized.includes("publishing")) return "bg-[#fff2d5] text-[#87600f]";
   return "bg-[#eaf1ff] text-[#315f9f]";
 };
 
@@ -453,14 +454,17 @@ export function ContentView({
 
 export function PublishedView({
   items,
+  loadError,
   onOpen,
 }: {
   items: any[];
+  loadError?: string | null;
   onOpen: (item: any) => void;
 }) {
   const [marketFilter, setMarketFilter] = useState<string>("ALL");
+  const safeItems = Array.isArray(items) ? items : [];
 
-  const filteredItems = items.filter((item) => {
+  const filteredItems = safeItems.filter((item) => {
     if (marketFilter === "ALL") return true;
     const market = String(item.market || item.markets?.[0] || "").toUpperCase();
     return market === marketFilter;
@@ -489,6 +493,7 @@ export function PublishedView({
       </div>
 
       <article className="mt-7 overflow-hidden rounded-2xl border border-[#e8e4ea] bg-white shadow-[0_12px_28px_rgba(23,18,28,0.04)]">
+        {loadError ? <div role="alert" className="border-b border-[#f2c6c9] bg-[#fff4f4] px-5 py-3 text-sm text-[#91343e]">{loadError}</div> : null}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -497,6 +502,7 @@ export function PublishedView({
                 <TableHead>Image</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Platform</TableHead>
                 <TableHead>Markets</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Captured</TableHead>
@@ -524,6 +530,9 @@ export function PublishedView({
                     </Badge>
                   </TableCell>
 
+                  <TableCell className="text-xs font-medium capitalize text-[#554d58]">
+                    {String(item.platform || "Meta").toLowerCase()}{item.slideIndex ? ` · Image ${item.slideIndex}` : ""}
+                  </TableCell>
 
                   <TableCell>
                     <Badge variant="outline">{item.market}</Badge>
@@ -536,7 +545,7 @@ export function PublishedView({
           </Table>
         </div>
 
-        {items.length === 0 ? (
+        {!loadError && safeItems.length === 0 ? (
           <div className="p-12 text-center">
             <CheckCircle2 className="mx-auto size-6 text-[#9b949e]" />
 

@@ -121,6 +121,29 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ integration: result.rows[0] });
     } else if (provider && allowedProviders.includes(provider)) {
+      if (provider === "pinterest" || provider === "tiktok") {
+        const existing = await pool.query(
+          `SELECT id FROM integrations WHERE provider = $1 ORDER BY id DESC LIMIT 1`,
+          [provider],
+        );
+        if (existing.rowCount) {
+          const cleanConfig: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(configuration)) {
+            if (typeof value === "string" && value.trim()) cleanConfig[key] = value.trim();
+          }
+          const updated = await pool.query(
+            `UPDATE integrations
+             SET configuration = configuration || $2::jsonb,
+                 status = COALESCE($3, status),
+                 token_expires_at = COALESCE($4::timestamptz, token_expires_at),
+                 updated_at = NOW()
+             WHERE id = $1
+             RETURNING id, provider, account_name, status, activate, token_expires_at, updated_at`,
+            [existing.rows[0].id, JSON.stringify(cleanConfig), status || "active", token_expires_at || null],
+          );
+          return NextResponse.json({ integration: updated.rows[0] });
+        }
+      }
       const result = await pool.query(
         `
         INSERT INTO integrations (provider, account_name, configuration, status, activate, token_expires_at)

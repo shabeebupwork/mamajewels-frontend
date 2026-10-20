@@ -12,6 +12,9 @@ export async function GET() {
         content_id,
         variant_id,
         market,
+        platform,
+        platform_post_id,
+        slide_index,
         status,
         meta_container_id,
         meta_media_id,
@@ -64,6 +67,9 @@ export async function GET() {
           : null,
 
         market: row.market,
+        platform: row.platform || "meta",
+        platformPostId: row.platform_post_id || null,
+        slideIndex: row.slide_index ?? null,
         status: row.status,
 
         title:

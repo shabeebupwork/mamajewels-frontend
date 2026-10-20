@@ -272,6 +272,12 @@ function ContentReviewSheet({
   const [tiktokMarkets, setTiktokMarkets] = useState<string[]>([]);
   const [republishMarkets, setRepublishMarkets] = useState<string[]>([]);
   const [republishWarningOpen, setRepublishWarningOpen] = useState(false);
+  const [pinterestCarouselDialogOpen, setPinterestCarouselDialogOpen] = useState(false);
+  const [tiktokDialogOpen, setTiktokDialogOpen] = useState(false);
+  const [tiktokPrivacyOptions, setTiktokPrivacyOptions] = useState<string[]>([]);
+  const [tiktokPrivacyLevel, setTiktokPrivacyLevel] = useState("");
+  const [tiktokConsent, setTiktokConsent] = useState(false);
+  const [tiktokCreatorName, setTiktokCreatorName] = useState("");
   const [approving, setApproving] = useState(false);
 
   useEffect(() => {
@@ -313,25 +319,75 @@ function ContentReviewSheet({
       setApproving(false);
     }
   };
-  const handlePublishPlatform = async (platform: "pinterest" | "tiktok", markets: string[]) => {
+  const handlePublishPlatform = async (
+    platform: "pinterest" | "tiktok",
+    markets: string[],
+    options: { pinterestCarouselMode?: "separate" | "first"; tiktokPrivacyLevel?: string; tiktokConsent?: boolean } = {},
+  ) => {
     if (markets.length === 0) {
       toast.error(`Select at least one market for ${platform === "pinterest" ? "Pinterest" : "TikTok"}`);
       return;
     }
     setApproving(true);
     try {
+      for (const market of markets) {
+        const key = market.toLowerCase();
+        const caption = editedCaptions[key];
+        if (caption === undefined) continue;
+        const saveResponse = await fetch("/api/content/localization", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contentId: item.id, market, caption }),
+        });
+        const saveResult = await saveResponse.json().catch(() => ({})) as { error?: string };
+        if (!saveResponse.ok) throw new Error(saveResult.error || `Failed to save ${market} caption`);
+      }
       const response = await fetch("/api/content/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentId: item.id, markets, platform, action: "publish" }),
+        body: JSON.stringify({ contentId: item.id, markets, platform, ...options }),
       });
-      const data = (await response.json()) as { error?: string };
+      const data = await response.json() as { error?: string; message?: string; results?: { status?: string }[]; skipped?: boolean };
       if (!response.ok) throw new Error(data.error || `Failed to publish to ${platform}`);
-      toast.success(`Published to ${platform === "pinterest" ? "Pinterest" : "TikTok"} for ${markets.join(", ")}`);
+      if (data.skipped) {
+        toast.message(data.message || "Pinterest publishing cancelled");
+      } else if (data.results?.some((result) => result.status === "failed")) {
+        toast.warning(data.message || `Some ${platform} posts failed`);
+      } else {
+        toast.success(data.message || (platform === "tiktok" ? "TikTok accepted the posts; status will update after processing." : "Pinterest Pins published."));
+      }
+      setPinterestCarouselDialogOpen(false);
+      setTiktokDialogOpen(false);
       onClose();
       onApproved();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : `Failed to publish to ${platform}`);
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const preparePinterestPublish = () => {
+    if (item.type === "Carousel" && (item.images?.length || item.driveFileIds?.length || 0) > 1) {
+      setPinterestCarouselDialogOpen(true);
+      return;
+    }
+    void handlePublishPlatform("pinterest", pinterestMarkets, { pinterestCarouselMode: "first" });
+  };
+
+  const prepareTikTokPublish = async () => {
+    setApproving(true);
+    try {
+      const response = await fetch("/api/integrations/tiktok/creator-info", { method: "POST" });
+      const data = await response.json() as { error?: string; creator?: { username?: string | null; nickname?: string | null; privacyOptions?: string[] } };
+      if (!response.ok || !data.creator?.privacyOptions?.length) throw new Error(data.error || "Unable to load TikTok account publishing options.");
+      setTiktokPrivacyOptions(data.creator.privacyOptions);
+      setTiktokPrivacyLevel(data.creator.privacyOptions.includes("PUBLIC_TO_EVERYONE") ? "PUBLIC_TO_EVERYONE" : data.creator.privacyOptions[0]);
+      setTiktokCreatorName(data.creator.nickname || data.creator.username || "TikTok account");
+      setTiktokConsent(false);
+      setTiktokDialogOpen(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to load TikTok account publishing options.");
     } finally {
       setApproving(false);
     }
@@ -751,7 +807,7 @@ function ContentReviewSheet({
                 <button
                   type="button"
                   disabled={!canEdit || approving || pinterestMarkets.length === 0}
-                  onClick={() => handlePublishPlatform("pinterest", pinterestMarkets)}
+                  onClick={preparePinterestPublish}
                   className="flex items-center justify-center gap-1.5 rounded-xl bg-[#E60023] px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#b8001b] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
                 >
                   <svg className="size-3.5 fill-current" viewBox="0 0 24 24">
@@ -764,7 +820,7 @@ function ContentReviewSheet({
                 <button
                   type="button"
                   disabled={!canEdit || approving || tiktokMarkets.length === 0}
-                  onClick={() => handlePublishPlatform("tiktok", tiktokMarkets)}
+                  onClick={() => void prepareTikTokPublish()}
                   className="flex items-center justify-center gap-1.5 rounded-xl border border-[#010101] bg-[#010101] px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#1a1a1a] hover:border-[#25f4ee]/50 hover:shadow-[0_0_12px_rgba(37,244,238,0.25)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
                 >
                   <svg className="size-3.5 fill-current" viewBox="0 0 24 24">
@@ -793,6 +849,49 @@ function ContentReviewSheet({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    <AlertDialog open={pinterestCarouselDialogOpen && !readOnly} onOpenChange={setPinterestCarouselDialogOpen}>
+      <AlertDialogContent className="rounded-xl">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-[#fff2d5] text-[#8a641a]"><AlertTriangle /></AlertDialogMedia>
+          <AlertDialogTitle>Pinterest does not publish this as a carousel</AlertDialogTitle>
+          <AlertDialogDescription>
+            Choose how the {item.images?.length || item.driveFileIds?.length} slides should be posted to the configured Pinterest account. Separate Pins will appear as separate posts for each selected market.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-col sm:flex-col sm:items-stretch">
+          <Button disabled={approving} onClick={() => void handlePublishPlatform("pinterest", pinterestMarkets, { pinterestCarouselMode: "separate" })}>Create a separate Pin for every slide</Button>
+          <Button variant="outline" disabled={approving} onClick={() => void handlePublishPlatform("pinterest", pinterestMarkets, { pinterestCarouselMode: "first" })}>Publish only the first image</Button>
+          <AlertDialogCancel disabled={approving}>Don't post this carousel</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog open={tiktokDialogOpen && !readOnly} onOpenChange={setTiktokDialogOpen}>
+      <AlertDialogContent className="rounded-xl">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-[#f3f4f6] text-[#111827]"><Send /></AlertDialogMedia>
+          <AlertDialogTitle>Publish to TikTok</AlertDialogTitle>
+          <AlertDialogDescription>
+            Posting as {tiktokCreatorName}. TikTok may take a few minutes to process the post before it appears on the profile.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="grid gap-2">
+          <Label htmlFor="tiktok-privacy">Who can view this post?</Label>
+          <select id="tiktok-privacy" value={tiktokPrivacyLevel} onChange={(event) => setTiktokPrivacyLevel(event.target.value)} className="h-10 rounded-md border border-[#ded9e1] bg-white px-3 text-sm">
+            {tiktokPrivacyOptions.map((option) => <option key={option} value={option}>{option.replaceAll("_", " ").toLowerCase()}</option>)}
+          </select>
+          <label className="flex items-start gap-2 text-sm leading-5 text-[#5f5863]">
+            <input type="checkbox" checked={tiktokConsent} onChange={(event) => setTiktokConsent(event.target.checked)} className="mt-1 accent-[#111827]" />
+            I consent to sending this media and its caption to TikTok for publishing.
+          </label>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={approving}>Cancel</AlertDialogCancel>
+          <Button disabled={approving || !tiktokConsent || !tiktokPrivacyLevel} onClick={() => void handlePublishPlatform("tiktok", tiktokMarkets, { tiktokPrivacyLevel, tiktokConsent })}>
+            {approving ? "Sending…" : "Publish to TikTok"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
@@ -808,6 +907,7 @@ export default function DashboardClient() {
   const [reviewReadOnly, setReviewReadOnly] = useState(false);
   const [dbContentItems, setDbContentItems] = useState<ReviewItem[]>([]);
   const [publishedItems, setPublishedItems] = useState<any[]>([]);
+  const [publishedLoadError, setPublishedLoadError] = useState<string | null>(null);
   const [dbUgcItems, setDbUgcItems] = useState<ReviewItem[]>([]);
   const [ugcContentItems, setUgcContentItems] = useState<ReviewItem[]>([]);
   const [failureItems, setFailureItems] = useState<any[]>([]);
@@ -878,12 +978,52 @@ export default function DashboardClient() {
   }, [signedIn]);
   useEffect(() => {
   if (!signedIn) return;
-  fetch("/api/published")
-    .then((res) => res.json())
-    .then((data) => setPublishedItems(data as any[]))
-    .catch((error) =>
-      console.error("Failed to load published content:", error)
-    );
+    fetch("/api/published", { cache: "no-store" })
+      .then(async (response) => {
+        const data: unknown = await response.json().catch(() => null);
+        if (!response.ok) throw new Error("Published content could not be loaded. Check the server logs and database migration.");
+        if (!Array.isArray(data)) throw new Error("The published content response was invalid.");
+        setPublishedItems(data);
+        setPublishedLoadError(null);
+      })
+      .catch((error) => {
+        setPublishedItems([]);
+        setPublishedLoadError(error instanceof Error ? error.message : "Published content could not be loaded.");
+        console.error("Failed to load published content:", error);
+      });
+  }, [signedIn]);
+  useEffect(() => {
+    if (!signedIn) return;
+    let active = true;
+    const refreshPublishingStatus = async () => {
+      try {
+        const response = await fetch("/api/publishing/status", { method: "POST" });
+        if (!response.ok || !active) return;
+        const status = await response.json() as { completed?: number; failed?: number };
+        if (!status.completed && !status.failed) return;
+        const [contentResponse, publishedResponse] = await Promise.all([
+          fetch("/api/content"),
+          fetch("/api/published"),
+        ]);
+        if (!active) return;
+        if (contentResponse.ok) setDbContentItems(await contentResponse.json() as ReviewItem[]);
+        if (publishedResponse.ok) {
+          const publishedData: unknown = await publishedResponse.json();
+          if (Array.isArray(publishedData)) {
+            setPublishedItems(publishedData);
+            setPublishedLoadError(null);
+          }
+        }
+      } catch (error) {
+        console.error("Background publishing status refresh failed:", error);
+      }
+    };
+    void refreshPublishingStatus();
+    const interval = window.setInterval(() => void refreshPublishingStatus(), 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, [signedIn]);
   useEffect(() => {
     if (!signedIn) return;
@@ -1014,7 +1154,7 @@ export default function DashboardClient() {
       );
     }
 
-    if (activePage === "published") return <PublishedView items={publishedItems} onOpen={(published) => {
+    if (activePage === "published") return <PublishedView items={publishedItems} loadError={publishedLoadError} onOpen={(published) => {
       const content = dbContentItems.find((item) => item.id === String(published.contentId));
       const market = String(published.market || "").toUpperCase();
       const fallback: ReviewItem = {
@@ -1060,6 +1200,17 @@ export default function DashboardClient() {
     refreshUgcItems();
   }}
   onApproved={async () => {
+    try {
+      for (let attempt = 0; attempt < 24; attempt += 1) {
+        const statusResponse = await fetch("/api/publishing/status", { method: "POST" });
+        if (!statusResponse.ok) break;
+        const statusData = await statusResponse.json() as { pending?: number };
+        if (!statusData.pending) break;
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    } catch (error) {
+      console.error("Publishing status polling failed:", error);
+    }
     const [contentRes, publishedRes, ugcContentRes, ugcRes] = await Promise.all([
       fetch("/api/content"),
       fetch("/api/published"),
@@ -1071,8 +1222,15 @@ export default function DashboardClient() {
       setDbContentItems(data as ReviewItem[]);
     }
     if (publishedRes.ok) {
-      const data = await publishedRes.json();
-      setPublishedItems(data as any[]);
+      const data: unknown = await publishedRes.json();
+      if (Array.isArray(data)) {
+        setPublishedItems(data);
+        setPublishedLoadError(null);
+      } else {
+        setPublishedLoadError("The published content response was invalid.");
+      }
+    } else {
+      setPublishedLoadError("Published content could not be loaded. Check the server logs and database migration.");
     }
     if (ugcContentRes.ok) {
       const data = await ugcContentRes.json();
